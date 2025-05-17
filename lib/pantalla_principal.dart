@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'productos_page.dart';
+import 'historial_page.dart';
+import 'moneda_page.dart';
 
-class PantallaPrincipal extends StatelessWidget {
+class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({super.key});
 
-  void logout(BuildContext context) async {
+  @override
+  State<PantallaPrincipal> createState() => _PantallaPrincipalState();
+}
+
+class _PantallaPrincipalState extends State<PantallaPrincipal> {
+  Future<void> logout(BuildContext contextDelBoton) async {
     await FirebaseAuth.instance.signOut();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Sesión cerrada")),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Sesión cerrada")),
+      );
+    }
   }
 
   @override
@@ -37,11 +46,20 @@ class PantallaPrincipal extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const ProductosPage()),
             );
           }),
-
           _crearOpcion(context, Icons.add_shopping_cart, "Entradas", () {}),
           _crearOpcion(context, Icons.remove_shopping_cart, "Salidas", () {}),
-          _crearOpcion(context, Icons.history, "Historial", () {}),
-          _crearOpcion(context, Icons.attach_money, "Moneda", () {}),
+          _crearOpcion(context, Icons.history, "Historial", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HistorialPage()),
+            );
+          }),
+          _crearOpcion(context, Icons.attach_money, "Moneda", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MonedaPage()),
+            );
+          }),
           _crearOpcion(context, Icons.calculate, "Costos", () {}),
         ],
       ),

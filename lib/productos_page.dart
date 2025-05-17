@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ProductosPage extends StatelessWidget {
+class ProductosPage extends StatefulWidget {
   const ProductosPage({super.key});
 
-  void _agregarProducto(BuildContext context) async {
+  @override
+  State<ProductosPage> createState() => _ProductosPageState();
+}
+
+class _ProductosPageState extends State<ProductosPage> {
+  double? tasaBCV;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarTasaBCV();
+  }
+
+  Future<void> _cargarTasaBCV() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      tasaBCV = prefs.getDouble('tasa_bcv') ?? 0.0;
+    });
+  }
+
+  void _agregarProducto() async {
     final nuevoProducto = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => const _DialogoAgregarProducto(),
@@ -13,13 +34,15 @@ class ProductosPage extends StatelessWidget {
     if (nuevoProducto != null) {
       await FirebaseFirestore.instance.collection('productos').add(nuevoProducto);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Producto guardado")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Producto guardado")),
+        );
+      }
     }
   }
 
-  void _registrarEntradaSalida(BuildContext context, String productoId, bool esEntrada) async {
+  Future<void> _registrarEntradaSalida(String productoId, bool esEntrada) async {
     final productoRef = FirebaseFirestore.instance.collection('productos').doc(productoId);
 
     final doc = await productoRef.get();
@@ -28,23 +51,25 @@ class ProductosPage extends StatelessWidget {
     final nuevaCantidad = esEntrada ? stockActual + 1 : stockActual - 1;
 
     if (nuevaCantidad >= 0) {
-      // Actualizar el stock del producto
       await productoRef.update({'stock': nuevaCantidad});
 
-      // Registrar el movimiento
       await FirebaseFirestore.instance.collection('movimientos').add({
         'productoId': productoId,
         'cantidad': esEntrada ? 1 : -1,
         'fecha': Timestamp.now(),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(esEntrada ? "Entrada registrada!" : "Salida registrada!")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(esEntrada ? "Entrada registrada!" : "Salida registrada!")),
+        );
+      }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("¡No hay suficiente stock!")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("¡No hay suficiente stock!")),
+        );
+      }
     }
   }
 
@@ -69,24 +94,56 @@ class ProductosPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final p = docs[index];
               final nombre = p['nombre'];
-              final precio = p['precio'];
+              final precioUSD = p['precio'] is int
+                  ? (p['precio'] as int).toDouble()
+                  : p['precio'] ?? 0.0;
               final stock = (p.data() as Map<String, dynamic>).containsKey('stock') ? p['stock'] : 0;
-              // Si no existe el stock, se asigna 0 por defecto
+
+              final precioBs = tasaBCV != null && tasaBCV! > 0
+                  ? precioUSD * tasaBCV!
+                  : 0.0;
+
+              final stockBajo = stock <= 5;
 
               return ListTile(
                 leading: const Icon(Icons.inventory),
-                title: Text(nombre),
-                subtitle: Text("Precio: \$${precio.toStringAsFixed(2)} | Stock: $stock"),
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        nombre,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (stockBajo)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 8.0),
+                        child: Icon(Icons.warning, color: Colors.red, size: 18),
+                      ),
+                  ],
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Precio: \$${precioUSD.toStringAsFixed(2)} | Bs ${precioBs.toStringAsFixed(2)}",
+                      style: TextStyle(
+                        color: stockBajo ? Colors.red : Colors.black,
+                      ),
+                    ),
+                    Text("Stock: $stock"),
+                  ],
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.remove_circle, color: Colors.red),
-                      onPressed: () => _registrarEntradaSalida(context, p.id, false),
+                      onPressed: () => _registrarEntradaSalida(p.id, false),
                     ),
                     IconButton(
                       icon: const Icon(Icons.add_circle, color: Colors.green),
-                      onPressed: () => _registrarEntradaSalida(context, p.id, true),
+                      onPressed: () => _registrarEntradaSalida(p.id, true),
                     ),
                   ],
                 ),
@@ -96,9 +153,9 @@ class ProductosPage extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _agregarProducto(context),
-        child: const Icon(Icons.add),
+        onPressed: _agregarProducto,
         tooltip: 'Agregar producto',
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -115,6 +172,32 @@ class _DialogoAgregarProductoState extends State<_DialogoAgregarProducto> {
   final nombreCtrl = TextEditingController();
   final precioCtrl = TextEditingController();
   final stockCtrl = TextEditingController();
+
+  double? tasaBCV;
+  double precioBs = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarTasaBCV();
+    precioCtrl.addListener(_actualizarPrecioBs);
+  }
+
+  Future<void> _cargarTasaBCV() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      tasaBCV = prefs.getDouble('tasa_bcv') ?? 0.0;
+    });
+  }
+
+  void _actualizarPrecioBs() {
+    final precioUSD = double.tryParse(precioCtrl.text) ?? 0.0;
+    if (tasaBCV != null) {
+      setState(() {
+        precioBs = precioUSD * tasaBCV!;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -140,6 +223,17 @@ class _DialogoAgregarProductoState extends State<_DialogoAgregarProducto> {
             decoration: const InputDecoration(labelText: 'Precio en USD'),
             keyboardType: TextInputType.number,
           ),
+          if (tasaBCV != null && tasaBCV! > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Precio en Bs: ${precioBs.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 14, color: Colors.blueGrey),
+                ),
+              ),
+            ),
           TextField(
             controller: stockCtrl,
             decoration: const InputDecoration(labelText: 'Stock Inicial'),
