@@ -6,8 +6,9 @@ import 'package:app_inventario/pages/productos_page.dart';
 import 'package:app_inventario/pages/historial_page.dart';
 import 'package:app_inventario/pages/moneda_page.dart';
 import 'package:app_inventario/pages/entrada_page.dart';
-// Importa la página de Salida una vez que la crees
-// import 'package:app_inventario/pages/salida_page.dart';
+import 'package:app_inventario/pages/gestion_productos_page.dart';
+import 'package:app_inventario/pages/salida_page.dart';
+import 'package:app_inventario/pages/costos_page.dart';
 
 class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({super.key});
@@ -25,8 +26,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       if (mounted) {
         // Redireccionar al AuthGate que manejará el estado de autenticación
         // y mostrará LoginPage si no hay usuario.
-        // No es necesario un SnackBar aquí, AuthGate ya se encargará de la navegación.
-        // Opcionalmente, puedes mantener el SnackBar para confirmación visual inmediata.
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Sesión cerrada correctamente.")),
         );
@@ -110,18 +109,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ),
                     _buildMenuItem(
                       context,
-                      icon: Icons.remove_shopping_cart,
+                      icon: Icons.remove_shopping_cart, // Ícono para salida
                       title: "Salidas",
-                      subtitle: "Registrar ventas o retiros",
-                      color: Colors.redAccent,
+                      subtitle: "Registrar salida de productos", // Nuevo subtítulo
+                      color: Colors.red, // Color para salidas
                       onTap: () {
-                        // Implementar SalidaPage
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(builder: (_) => const SalidaPage()),
-                        // );
-                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Funcionalidad de Salidas en desarrollo.")),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SalidaPage()),
                         );
                       },
                     ),
@@ -155,11 +150,25 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       context,
                       icon: Icons.calculate,
                       title: "Costos",
-                      subtitle: "Calcular y analizar",
-                      color: Colors.brown,
+                      subtitle: "Calcular el costo del inventario", // Nuevo subtítulo
+                      color: Colors.blueGrey, // Nuevo color
                       onTap: () {
-                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Funcionalidad de Costos en desarrollo.")),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CostosPage()),
+                        );
+                      },
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.add_box_outlined, // Un icono que sugiera "crear" o "gestionar" un elemento
+                      title: "Gestionar Productos",
+                      subtitle: "Crear o editar artículos",
+                      color: Colors.purple, // Un color distinto para esta sección
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const GestionProductosPage()),
                         );
                       },
                     ),
@@ -213,79 +222,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             ),
           ),
           const SizedBox(height: 15),
-          // Aquí podríamos añadir información resumida del inventario
-          // Por ejemplo:
-          // _buildSummaryCard(
-          //   icon: Icons.storage,
-          //   title: "Productos en Stock",
-          //   value: "250", // Esto debería venir de Firestore
-          //   color: Colors.blue.shade200,
-          // ),
-          // const SizedBox(height: 10),
-          // _buildSummaryCard(
-          //   icon: Icons.warning_amber,
-          //   title: "Stock Bajo",
-          //   value: "5", // Esto debería venir de Firestore
-          //   color: Colors.red.shade200,
-          // ),
         ],
       ),
     );
   }
 
-  // Comentado temporalmente porque no se usa aún. Lo activaremos al conectar con datos de inventario.
-  /*
-  Widget _buildSummaryCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Card(
-      color: color,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            Icon(icon, size: 30, color: Colors.white),
-            const SizedBox(width: 15),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  */
-
   Widget _buildMenuItem(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+      BuildContext context, {
+        required IconData icon,
+        required String title,
+        required String subtitle,
+        required Color color,
+        required VoidCallback onTap,
+      }) {
     return GestureDetector(
       onTap: onTap,
       child: Card(
@@ -297,22 +246,22 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [color.withAlpha((255 * 0.8).round()), color], // Corregido withOpacity
+              colors: [color.withAlpha((255 * 0.8).round()), color],
             ),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(12.0), // Ajuste de padding de 16.0 a 12.0
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, size: 48, color: Colors.white),
-                const SizedBox(height: 10),
+                Icon(icon, size: 40, color: Colors.white), // Tamaño del icono ajustado de 48 a 40
+                const SizedBox(height: 8), // Ajuste de espacio de 10 a 8
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16, // Ajuste de tamaño de fuente de 18 a 16
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -321,9 +270,11 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 Text(
                   subtitle,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11, // Ajuste de tamaño de fuente de 12 a 11
                     color: Colors.white70,
                   ),
+                  overflow: TextOverflow.ellipsis, // Asegurar que el texto largo se trunca
+                  maxLines: 2, // Permitir hasta 2 líneas para el subtítulo
                 ),
               ],
             ),

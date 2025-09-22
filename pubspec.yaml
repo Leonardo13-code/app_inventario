@@ -30,9 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^2.32.0
-  firebase_auth: ^4.16.0
-  cloud_firestore: ^4.15.4
+  firebase_core: ^4.1.0   # Actualiza a la versión más reciente
+  firebase_auth: ^6.0.2   # Actualiza a la versión más reciente
+  cloud_firestore: ^6.0.1  # Actualiza a la versión más reciente
   flutter_speed_dial: ^7.0.0
   shared_preferences: ^2.2.2
   intl: ^0.20.2
