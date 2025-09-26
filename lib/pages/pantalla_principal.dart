@@ -9,6 +9,8 @@ import 'package:app_inventario/pages/entrada_page.dart';
 import 'package:app_inventario/pages/gestion_productos_page.dart';
 import 'package:app_inventario/pages/salida_page.dart';
 import 'package:app_inventario/pages/costos_page.dart';
+import 'package:app_inventario/pages/venta_page.dart';
+import 'package:app_inventario/pages/historial_ventas_page.dart';
 
 class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({super.key});
@@ -96,6 +98,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ),
                     _buildMenuItem(
                       context,
+                      icon: Icons.shopping_cart,
+                      title: "Ventas y Pedidos",
+                      subtitle: "Registrar ventas y generar facturas",
+                      color: const Color.fromARGB(255, 41, 193, 231),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const VentaPage()),
+                        );
+                      },
+                    ),
+                    _buildMenuItem(
+                      context,
                       icon: Icons.add_shopping_cart,
                       title: "Entradas",
                       subtitle: "Registrar nuevos productos",
@@ -123,7 +138,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     _buildMenuItem(
                       context,
                       icon: Icons.history,
-                      title: "Historial",
+                      title: "Historial de Entradas y Salidas",
                       subtitle: "Ver movimientos recientes",
                       color: Colors.orangeAccent,
                       onTap: () {
@@ -133,6 +148,21 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         );
                       },
                     ),
+
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.history,
+                      title: "Historial de Ventas",
+                      subtitle: "Revisar ventas anteriores y facturar",
+                      color: const Color.fromARGB(255, 245, 209, 4), 
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HistorialVentasPage()),
+                        );
+                      },
+                    ),
+
                     _buildMenuItem(
                       context,
                       icon: Icons.attach_money,

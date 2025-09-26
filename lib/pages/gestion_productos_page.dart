@@ -24,7 +24,7 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
         backgroundColor: Colors.purple,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>( // Aseguramos el tipo del StreamBuilder
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _firestoreService.getCollection('productos', orderByField: 'nombre').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -44,17 +44,19 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
             itemCount: productos.length,
             itemBuilder: (context, index) {
               final productoDoc = productos[index];
-              // FINALMENTE, eliminamos el casteo explícito, ya que el conversor lo maneja
-              final data = productoDoc.data(); // <--- CORRECCIÓN AQUÍ (Línea 109)
+              final data = productoDoc.data();
               final String nombre = data['nombre'] ?? 'Sin Nombre';
               final double precio = (data['precio'] as num?)?.toDouble() ?? 0.0;
-              final int stock = (data['stock'] as num?)?.toInt() ?? 0;
+              final double stock = (data['stock'] as num?)?.toDouble() ?? 0.0;
+              final bool esPorPeso = data['por_peso'] ?? false;
+              final bool esExentoIva = data['exento_iva'] ?? false; // NUEVO CAMPO
 
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 child: ListTile(
+                  leading: Icon(esPorPeso ? Icons.scale : Icons.inventory_2, color: Colors.purple),
                   title: Text(
                     nombre,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -62,8 +64,16 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Precio: \$${precio.toStringAsFixed(2)}'),
-                      Text('Stock: $stock unidades'),
+                      Text('Precio: \$${precio.toStringAsFixed(2)} ${esPorPeso ? '/Kg' : '/u'}'),
+                      Text('Stock: ${stock.toStringAsFixed(esPorPeso ? 2 : 0)} ${esPorPeso ? 'Kg' : 'unidades'}'),
+                      Text(
+                        esExentoIva ? 'EXENTO DE IVA' : 'APLICA IVA (16%)', // Mostrar estado IVA
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic, 
+                          color: esExentoIva ? Colors.orange : Colors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                   trailing: Row(
@@ -100,15 +110,15 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
     _mostrarDialogoProducto(
       context,
       title: 'Agregar Nuevo Producto',
-      onSave: (nombre, precio, stock) async {
+      // Añadida exentoIva a la firma de onSave
+      onSave: (nombre, precio, stock, esPorPeso, exentoIva) async { 
         try {
-          // Verificar si ya existe un producto con el mismo nombre
           final existingProducts = await _firestoreService.getCollectionOnce(
             'productos',
           );
           bool productExists = existingProducts.docs.any((doc) {
-            final data = doc.data(); // Eliminado el casteo
-            return (data?['nombre'] as String?)?.toLowerCase() == nombre.toLowerCase();
+            final data = doc.data();
+            return (data['nombre'] as String?)?.toLowerCase() == nombre.toLowerCase();
           });
 
           if (productExists) {
@@ -119,11 +129,13 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
             }
             return false;
           }
-
+          
           await _firestoreService.addDocument('productos', {
             'nombre': nombre,
             'precio': precio,
-            'stock': stock,
+            'stock': stock.toDouble(),
+            'por_peso': esPorPeso,
+            'exento_iva': exentoIva, // NUEVO CAMPO A GUARDAR
           });
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -144,12 +156,14 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
   }
 
   // Método para editar un producto existente
-  void _editarProducto(DocumentSnapshot<Map<String, dynamic>> productoDoc) { // Aseguramos el tipo
-    final data = productoDoc.data(); // Eliminado el casteo
+  void _editarProducto(DocumentSnapshot<Map<String, dynamic>> productoDoc) {
+    final data = productoDoc.data();
     final String id = productoDoc.id;
     final String currentNombre = data?['nombre'] ?? '';
     final double currentPrecio = (data?['precio'] as num?)?.toDouble() ?? 0.0;
-    final int currentStock = (data?['stock'] as num?)?.toInt() ?? 0;
+    final double currentStock = (data?['stock'] as num?)?.toDouble() ?? 0.0;
+    final bool currentEsPorPeso = data?['por_peso'] ?? false;
+    final bool currentExentoIva = data?['exento_iva'] ?? false; // NUEVO CAMPO
 
     _mostrarDialogoProducto(
       context,
@@ -157,16 +171,18 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
       nombreInicial: currentNombre,
       precioInicial: currentPrecio,
       stockInicial: currentStock,
-      onSave: (nombre, precio, stock) async {
+      esPorPesoInicial: currentEsPorPeso,
+      exentoIvaInicial: currentExentoIva, // PASAR VALOR INICIAL
+      // Añadida exentoIva a la firma de onSave
+      onSave: (nombre, precio, stock, esPorPeso, exentoIva) async { 
         try {
-          // Verificar si ya existe un producto con el mismo nombre, excluyendo el actual
           final existingProducts = await _firestoreService.getCollectionOnce(
             'productos',
           );
           bool productExists = existingProducts.docs.any((doc) {
             if (doc.id == id) return false;
-            final existingData = doc.data(); // <--- CORRECCIÓN AQUÍ (Línea 167)
-            return (existingData?['nombre'] as String?)?.toLowerCase() == nombre.toLowerCase();
+            final existingData = doc.data();
+            return (existingData['nombre'] as String?)?.toLowerCase() == nombre.toLowerCase();
           });
 
           if (productExists) {
@@ -181,7 +197,9 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
           await _firestoreService.updateDocument('productos', id, {
             'nombre': nombre,
             'precio': precio,
-            'stock': stock,
+            'stock': stock.toDouble(),
+            'por_peso': esPorPeso,
+            'exento_iva': exentoIva, // NUEVO CAMPO A ACTUALIZAR
           });
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -201,8 +219,9 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
     );
   }
 
-  // Método para confirmar la eliminación de un producto
+  // Método para confirmar la eliminación de un producto (sin cambios)
   void _confirmarEliminarProducto(String productId, String productName) {
+    // ... (Tu función _confirmarEliminarProducto permanece igual)
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -240,19 +259,24 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
   }
 }
 
-// Diálogo reutilizable para agregar/editar producto
+// Diálogo reutilizable para agregar/editar producto - ACTUALIZADO
 class _ProductoFormDialog extends StatefulWidget {
   final String title;
   final String? nombreInicial;
   final double? precioInicial;
-  final int? stockInicial;
-  final Future<bool> Function(String nombre, double precio, int stock) onSave;
+  final double? stockInicial;
+  final bool? esPorPesoInicial;
+  final bool? exentoIvaInicial; // NUEVO CAMPO
+  // Añadida la variable 'exentoIva' a la firma de onSave
+  final Future<bool> Function(String nombre, double precio, double stock, bool esPorPeso, bool exentoIva) onSave; 
 
   const _ProductoFormDialog({
     required this.title,
     this.nombreInicial,
     this.precioInicial,
     this.stockInicial,
+    this.esPorPesoInicial,
+    this.exentoIvaInicial, // Recibir valor inicial
     required this.onSave,
   });
 
@@ -265,13 +289,17 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
   late TextEditingController _nombreController;
   late TextEditingController _precioController;
   late TextEditingController _stockController;
+  late bool _esPorPeso;
+  late bool _esExentoIva; // NUEVA VARIABLE DE ESTADO
 
   @override
   void initState() {
     super.initState();
     _nombreController = TextEditingController(text: widget.nombreInicial);
     _precioController = TextEditingController(text: widget.precioInicial?.toString());
-    _stockController = TextEditingController(text: widget.stockInicial?.toString());
+    _stockController = TextEditingController(text: widget.stockInicial?.toStringAsFixed(2)); 
+    _esPorPeso = widget.esPorPesoInicial ?? false;
+    _esExentoIva = widget.exentoIvaInicial ?? false; // Inicializar
   }
 
   @override
@@ -303,7 +331,7 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
               TextFormField(
                 controller: _precioController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Precio en USD'),
+                decoration: InputDecoration(labelText: 'Precio en USD ${ _esPorPeso ? ' (por Kg)' : ' (por unidad)'}'),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'El precio es requerido';
                   final parsedValue = double.tryParse(v);
@@ -314,13 +342,50 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
               TextFormField(
                 controller: _stockController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Stock Inicial'),
+                decoration: InputDecoration(labelText: 'Stock Inicial (${ _esPorPeso ? 'Kg' : 'unidades'})'),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'El stock inicial es requerido';
-                  final parsedValue = int.tryParse(v);
-                  if (parsedValue == null || parsedValue < 0) return 'Ingrese un stock válido (número entero positivo o cero)';
+                  final parsedValue = double.tryParse(v);
+                  if (parsedValue == null || parsedValue < 0) return 'Ingrese un stock válido (número positivo o cero)';
+                  
+                  if (!_esPorPeso && parsedValue != parsedValue.truncate()) {
+                      return 'El stock por unidad debe ser un número entero.';
+                  }
+
                   return null;
                 },
+              ),
+              const SizedBox(height: 15),
+              // SWITCH PARA 'POR PESO'
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Se vende por peso (Kg)'),
+                  Switch(
+                    value: _esPorPeso,
+                    onChanged: (bool newValue) {
+                      setState(() {
+                        _esPorPeso = newValue;
+                        _formKey.currentState?.validate();
+                      });
+                    },
+                  ),
+                ],
+              ),
+              // NUEVO SWITCH PARA 'EXENTO DE IVA'
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Exento de IVA'),
+                  Switch(
+                    value: _esExentoIva,
+                    onChanged: (bool newValue) {
+                      setState(() {
+                        _esExentoIva = newValue;
+                      });
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -337,7 +402,9 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
               final bool saved = await widget.onSave(
                 _nombreController.text.trim(),
                 double.tryParse(_precioController.text.trim()) ?? 0.0,
-                int.tryParse(_stockController.text.trim()) ?? 0,
+                double.tryParse(_stockController.text.trim()) ?? 0.0,
+                _esPorPeso,
+                _esExentoIva, // Enviamos el valor del switch de IVA
               );
               if (mounted && saved) {
                 Navigator.pop(context);
@@ -351,14 +418,17 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
   }
 }
 
-// Función auxiliar para mostrar el diálogo de producto
+// Función auxiliar para mostrar el diálogo de producto - ACTUALIZADA
 void _mostrarDialogoProducto(
   BuildContext context, {
   required String title,
   String? nombreInicial,
   double? precioInicial,
-  int? stockInicial,
-  required Future<bool> Function(String nombre, double precio, int stock) onSave,
+  double? stockInicial,
+  bool? esPorPesoInicial,
+  bool? exentoIvaInicial, // NUEVO CAMPO
+  // NUEVA FIRMA
+  required Future<bool> Function(String nombre, double precio, double stock, bool esPorPeso, bool exentoIva) onSave, 
 }) {
   showDialog(
     context: context,
@@ -367,6 +437,8 @@ void _mostrarDialogoProducto(
       nombreInicial: nombreInicial,
       precioInicial: precioInicial,
       stockInicial: stockInicial,
+      esPorPesoInicial: esPorPesoInicial,
+      exentoIvaInicial: exentoIvaInicial, // Pasar valor
       onSave: onSave,
     ),
   );

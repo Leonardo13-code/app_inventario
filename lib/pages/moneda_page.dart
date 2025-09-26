@@ -12,13 +12,12 @@ class MonedaPage extends StatefulWidget {
 class _MonedaPageState extends State<MonedaPage> {
   final TextEditingController montoCtrl = TextEditingController();
 
-  double dolarBCV = 38.50; // Tasa de Dólar BCV
-  double tasaEuro = 42.30;  // Tasa del Euro
-  double tasaPersonalizada = 40.00;
+  double dolarBCV = 0.0;
+  double tasaEuro = 0.0;
+  double tasaPersonalizada = 0.0;
   double resultado = 0.0;
   String tasaSeleccionada = 'Dólar BCV';
-  
-  // NUEVO: Agrega una variable para la tasa de conversión que se va a guardar
+
   late double _tasaConversion;
 
   @override
@@ -30,11 +29,12 @@ class _MonedaPageState extends State<MonedaPage> {
   Future<void> _cargarTasas() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
+      // Carga las tasas guardadas o usa valores predeterminados
       dolarBCV = prefs.getDouble('dolar_bcv') ?? 38.50;
       tasaEuro = prefs.getDouble('tasa_euro') ?? 42.30;
       tasaPersonalizada = prefs.getDouble('tasa_personalizada') ?? 40.00;
-      
-      // NUEVO: Cargar la última tasa de conversión seleccionada
+
+      // Establece la tasa inicial para la conversión
       _tasaConversion = prefs.getDouble('tasa_conversion') ?? dolarBCV;
       _determinarTasaSeleccionada();
     });
@@ -45,11 +45,9 @@ class _MonedaPageState extends State<MonedaPage> {
     await prefs.setDouble('dolar_bcv', dolarBCV);
     await prefs.setDouble('tasa_euro', tasaEuro);
     await prefs.setDouble('tasa_personalizada', tasaPersonalizada);
-    // NUEVO: Guarda la tasa seleccionada en el DropdownButton
     await prefs.setDouble('tasa_conversion', _tasaConversion);
   }
-  
-  // NUEVO: Determina la opción del DropdownButton basada en la tasa guardada
+
   void _determinarTasaSeleccionada() {
     if (_tasaConversion == dolarBCV) {
       tasaSeleccionada = 'Dólar BCV';
@@ -64,7 +62,7 @@ class _MonedaPageState extends State<MonedaPage> {
 
   void _convertir() {
     double monto = double.tryParse(montoCtrl.text) ?? 0.0;
-    
+
     switch (tasaSeleccionada) {
       case 'Dólar BCV':
         _tasaConversion = dolarBCV;
@@ -85,11 +83,10 @@ class _MonedaPageState extends State<MonedaPage> {
     setState(() {
       resultado = monto * _tasaConversion;
     });
-    
-    // NUEVO: Guardar la tasa de conversión seleccionada
+
     _guardarTasas();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,13 +124,13 @@ class _MonedaPageState extends State<MonedaPage> {
             const Divider(height: 30),
 
             const Text('Editar tasas manualmente', style: TextStyle(fontWeight: FontWeight.bold)),
-            TextField(
-              decoration: const InputDecoration(labelText: 'Tasa Dólar BCV'),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Tasa Dólar BCV (Actual: ${dolarBCV.toStringAsFixed(2)})'),
               keyboardType: TextInputType.number,
               onChanged: (v) => dolarBCV = double.tryParse(v) ?? dolarBCV,
             ),
-            TextField(
-              decoration: const InputDecoration(labelText: 'Tasa Euro'),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Tasa Euro (Actual: ${tasaEuro.toStringAsFixed(2)})'),
               keyboardType: TextInputType.number,
               onChanged: (v) => tasaEuro = double.tryParse(v) ?? tasaEuro,
             ),

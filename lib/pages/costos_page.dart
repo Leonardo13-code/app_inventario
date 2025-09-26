@@ -14,8 +14,8 @@ class CostosPageState extends State<CostosPage> {
   final FirestoreService _firestoreService = FirestoreService();
 
   Map<String, double> _costosPromedio = {};
-  bool _isLoading = true; // Para controlar el estado de carga
-  String? _errorMessage; // Para almacenar mensajes de error
+  bool _isLoading = true; 
+  String? _errorMessage; 
 
   @override
   void initState() {
@@ -26,7 +26,7 @@ class CostosPageState extends State<CostosPage> {
   Future<void> _calcularCostosPromedio() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null; // Limpiar cualquier mensaje de error anterior
+      _errorMessage = null;
     });
 
     try {
@@ -36,24 +36,21 @@ class CostosPageState extends State<CostosPage> {
       final querySnapshot = await _firestoreService.getCollectionOnce('movimientos');
       
       for (var doc in querySnapshot.docs) {
-        final data = doc.data(); // Esto es Map<String, dynamic>, no será null
+        final data = doc.data();
 
-        // --- CORRECCIÓN: Manejo de valores nulos para productoId y tipo ---
         final String? productoIdNullable = data['productoId'];
         final String? tipoNullable = data['tipo'];
 
-        // Si productoId es null, el movimiento es inválido para el cálculo de costos.
         if (productoIdNullable == null) {
           print('Advertencia: Documento de movimiento ${doc.id} tiene productoId nulo. Saltando.');
-          continue; // Salta este documento si el productoId es nulo.
+          continue;
         }
-        final String productoId = productoIdNullable; // Ahora sabemos que no es nulo.
-        
-        // Si tipo es null, usa una cadena vacía como valor por defecto.
+        final String productoId = productoIdNullable;
         final String tipo = tipoNullable ?? ''; 
-        // --- FIN CORRECCIÓN ---
 
-        final int cantidad = (data['cantidad'] is num ? (data['cantidad'] as num).abs().toInt() : 0); 
+        // --- CAMBIO CLAVE: Cargar 'cantidad' como double ---
+        // La cantidad del movimiento puede ser decimal (Kg).
+        final double cantidad = (data['cantidad'] is num ? (data['cantidad'] as num).abs().toDouble() : 0.0); 
         final double costoUnitario = (data['costoUnitario'] as num?)?.toDouble() ?? 0.0; 
 
         if (!productMovements.containsKey(productoId)) {
@@ -61,7 +58,7 @@ class CostosPageState extends State<CostosPage> {
         }
         productMovements[productoId]!.add({
           'tipo': tipo,
-          'cantidad': cantidad,
+          'cantidad': cantidad, // Cantidad ahora es double
           'costoUnitario': costoUnitario,
         });
       }
@@ -73,21 +70,20 @@ class CostosPageState extends State<CostosPage> {
         final List<Map<String, dynamic>> movements = productMovements[productId]!;
         
         double totalCost = 0.0;
-        int totalQuantity = 0;
+        double totalQuantity = 0.0; // CAMBIO CLAVE: Total Quantity ahora es double
 
         for (var movement in movements) {
-          // Asegurarse de que 'tipo' y 'cantidad' existan y sean del tipo esperado
           if (movement['tipo'] == 'Entrada') {
-            // Asegurarse de que 'cantidad' sea un int para la suma y multiplicación
-            final int movementCantidad = (movement['cantidad'] is num ? (movement['cantidad'] as num).toInt() : 0);
+            // Asegurarse de que 'cantidad' sea double para la suma y multiplicación
+            final double movementCantidad = (movement['cantidad'] is num ? (movement['cantidad'] as num).toDouble() : 0.0);
             final double movementCostoUnitario = (movement['costoUnitario'] is num ? (movement['costoUnitario'] as num).toDouble() : 0.0);
 
             totalCost += (movementCantidad * movementCostoUnitario);
-            totalQuantity += movementCantidad; 
+            totalQuantity += movementCantidad; // Suma de cantidades (que pueden ser decimales)
           }
         }
         
-        if (totalQuantity > 0) {
+        if (totalQuantity > 0.0) { // Compara con 0.0
           final double capp = totalCost / totalQuantity;
           calculatedCosts[productId] = capp;
         } else {
@@ -104,7 +100,7 @@ class CostosPageState extends State<CostosPage> {
       if (mounted) {
         setState(() {
           _errorMessage = 'Error al calcular costos: ${e.toString()}';
-          print('Error en _calcularCostosPromedio: $e'); // Para depuración
+          print('Error en _calcularCostosPromedio: $e');
         });
       }
     } finally {
@@ -190,9 +186,15 @@ class CostosPageState extends State<CostosPage> {
                         for (var doc in productos) {
                           final data = doc.data();
                           final String productoId = doc.id;
-                          final int stockActual = (data['stock'] as num?)?.toInt() ?? 0;
+                          // --- CAMBIO CLAVE: Cargar 'stock' como double ---
+                          final double stockActual = (data['stock'] as num?)?.toDouble() ?? 0.0; 
+                          final bool esPorPeso = data['por_peso'] ?? false; // Capturar si es por peso
+
                           final double capp = _costosPromedio[productoId] ?? 0.0;
                           costoTotalInventario += (stockActual * capp);
+                          
+                          // Adjuntar temporalmente 'esPorPeso' para usarlo en el ListView
+                          data['esPorPeso'] = esPorPeso; 
                         }
 
                         return Column(
@@ -238,9 +240,19 @@ class CostosPageState extends State<CostosPage> {
                                   final data = doc.data();
                                   final String productoId = doc.id;
                                   final String nombre = data['nombre'] ?? 'Sin Nombre';
-                                  final int stockActual = (data['stock'] as num?)?.toInt() ?? 0;
+                                  // --- CAMBIO CLAVE: Cargar 'stock' como double ---
+                                  final double stockActual = (data['stock'] as num?)?.toDouble() ?? 0.0;
+                                  // Usar la bandera que adjuntamos arriba
+                                  final bool esPorPeso = data['esPorPeso'] ?? false; 
+                                  
                                   final double capp = _costosPromedio[productoId] ?? 0.0;
                                   final double costoTotalProducto = stockActual * capp;
+
+                                  // Formato de stock: 2 decimales para Kg, 0 para unidades
+                                  final String stockText = stockActual.toStringAsFixed(esPorPeso ? 2 : 0);
+                                  final String unidadText = esPorPeso ? 'Kg' : 'unidades';
+                                  final String cappUnidadText = esPorPeso ? '/Kg' : '/unidad';
+
 
                                   return Card(
                                     margin: const EdgeInsets.symmetric(vertical: 6.0),
@@ -260,8 +272,8 @@ class CostosPageState extends State<CostosPage> {
                                             ),
                                           ),
                                           const SizedBox(height: 5),
-                                          Text('Stock Actual: $stockActual unidades'),
-                                          Text('Costo Promedio Ponderado (CAPP): \$${capp.toStringAsFixed(2)}/unidad'),
+                                          Text('Stock Actual: $stockText $unidadText'),
+                                          Text('Costo Promedio Ponderado (CAPP): \$${capp.toStringAsFixed(2)}$cappUnidadText'),
                                           Text(
                                             'Costo Total de Producto: \$${costoTotalProducto.toStringAsFixed(2)}',
                                             style: const TextStyle(fontWeight: FontWeight.w600),
