@@ -12,15 +12,29 @@ class CostosPage extends StatefulWidget {
 
 class CostosPageState extends State<CostosPage> {
   final FirestoreService _firestoreService = FirestoreService();
+  final TextEditingController _searchController = TextEditingController();
 
   Map<String, double> _costosPromedio = {};
-  bool _isLoading = true; 
-  String? _errorMessage; 
+  bool _isLoading = true;
+  String? _errorMessage;
+  String _searchQuery = ''; // Variable para almacenar la consulta de búsqueda
 
   @override
   void initState() {
     super.initState();
     _calcularCostosPromedio();
+    // Escuchar cambios en la barra de búsqueda
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _calcularCostosPromedio() async {
@@ -36,20 +50,19 @@ class CostosPageState extends State<CostosPage> {
       final querySnapshot = await _firestoreService.getCollectionOnce('movimientos');
       
       for (var doc in querySnapshot.docs) {
-        final data = doc.data();
+        final data = doc.data(); 
 
         final String? productoIdNullable = data['productoId'];
         final String? tipoNullable = data['tipo'];
 
         if (productoIdNullable == null) {
           print('Advertencia: Documento de movimiento ${doc.id} tiene productoId nulo. Saltando.');
-          continue;
+          continue; 
         }
-        final String productoId = productoIdNullable;
+        final String productoId = productoIdNullable; 
         final String tipo = tipoNullable ?? ''; 
 
-        // --- CAMBIO CLAVE: Cargar 'cantidad' como double ---
-        // La cantidad del movimiento puede ser decimal (Kg).
+        // --- CORRECCIÓN 1: Cargar 'cantidad' como double ---
         final double cantidad = (data['cantidad'] is num ? (data['cantidad'] as num).abs().toDouble() : 0.0); 
         final double costoUnitario = (data['costoUnitario'] as num?)?.toDouble() ?? 0.0; 
 
@@ -70,7 +83,7 @@ class CostosPageState extends State<CostosPage> {
         final List<Map<String, dynamic>> movements = productMovements[productId]!;
         
         double totalCost = 0.0;
-        double totalQuantity = 0.0; // CAMBIO CLAVE: Total Quantity ahora es double
+        double totalQuantity = 0.0; // CORRECCIÓN 2: Total Quantity ahora es double
 
         for (var movement in movements) {
           if (movement['tipo'] == 'Entrada') {
@@ -100,7 +113,7 @@ class CostosPageState extends State<CostosPage> {
       if (mounted) {
         setState(() {
           _errorMessage = 'Error al calcular costos: ${e.toString()}';
-          print('Error en _calcularCostosPromedio: $e');
+          print('Error en _calcularCostosPromedio: $e'); 
         });
       }
     } finally {
@@ -153,141 +166,170 @@ class CostosPageState extends State<CostosPage> {
                         ),
                       ),
                     )
-                  : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: _firestoreService.getCollection('productos', orderByField: 'nombre').snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          return Center(child: Text('Error al cargar productos: ${snapshot.error}'));
-                        }
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-
-                        final productos = snapshot.data?.docs ?? [];
-
-                        if (productos.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.inventory_2, size: 80, color: Colors.grey[400]),
-                                const SizedBox(height: 10),
-                                const Text(
-                                  'No hay productos registrados.',
-                                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                                ),
-                              ],
+                  : Column( // Envolver el StreamBuilder y la barra de búsqueda
+                      children: [
+                        // --- CORRECCIÓN 3: Barra de Búsqueda ---
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Buscar producto',
+                              suffixIcon: Icon(Icons.search),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                              ),
                             ),
-                          );
-                        }
+                          ),
+                        ),
+                        
+                        Expanded(
+                          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                            stream: _firestoreService.getCollection('productos', orderByField: 'nombre').snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasError) {
+                                return Center(child: Text('Error al cargar productos: ${snapshot.error}'));
+                              }
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
 
-                        // Calcular el costo total del inventario
-                        double costoTotalInventario = 0.0;
-                        for (var doc in productos) {
-                          final data = doc.data();
-                          final String productoId = doc.id;
-                          // --- CAMBIO CLAVE: Cargar 'stock' como double ---
-                          final double stockActual = (data['stock'] as num?)?.toDouble() ?? 0.0; 
-                          final bool esPorPeso = data['por_peso'] ?? false; // Capturar si es por peso
+                              final allProducts = snapshot.data?.docs ?? [];
+                              
+                              // Filtrar productos por la barra de búsqueda
+                              final filteredProducts = allProducts.where((doc) {
+                                final data = doc.data();
+                                final nombre = data['nombre']?.toString().toLowerCase() ?? '';
+                                return nombre.contains(_searchQuery.toLowerCase());
+                              }).toList();
 
-                          final double capp = _costosPromedio[productoId] ?? 0.0;
-                          costoTotalInventario += (stockActual * capp);
-                          
-                          // Adjuntar temporalmente 'esPorPeso' para usarlo en el ListView
-                          data['esPorPeso'] = esPorPeso; 
-                        }
 
-                        return Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Card(
-                                elevation: 4,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                color: Colors.blueGrey.shade100,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              if (allProducts.isEmpty) {
+                                // ... (Manejo de productos vacíos, sin cambios)
+                                return Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        'Costo Total de Inventario:',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blueGrey[800],
-                                        ),
-                                      ),
-                                      Text(
-                                        '\$${costoTotalInventario.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blueGrey[900],
-                                        ),
+                                      Icon(Icons.inventory_2, size: 80, color: Colors.grey[400]),
+                                      const SizedBox(height: 10),
+                                      const Text(
+                                        'No hay productos registrados.',
+                                        style: TextStyle(fontSize: 18, color: Colors.grey),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                                itemCount: productos.length,
-                                itemBuilder: (context, index) {
-                                  final doc = productos[index];
-                                  final data = doc.data();
-                                  final String productoId = doc.id;
-                                  final String nombre = data['nombre'] ?? 'Sin Nombre';
-                                  // --- CAMBIO CLAVE: Cargar 'stock' como double ---
-                                  final double stockActual = (data['stock'] as num?)?.toDouble() ?? 0.0;
-                                  // Usar la bandera que adjuntamos arriba
-                                  final bool esPorPeso = data['esPorPeso'] ?? false; 
-                                  
-                                  final double capp = _costosPromedio[productoId] ?? 0.0;
-                                  final double costoTotalProducto = stockActual * capp;
+                                );
+                              }
 
-                                  // Formato de stock: 2 decimales para Kg, 0 para unidades
-                                  final String stockText = stockActual.toStringAsFixed(esPorPeso ? 2 : 0);
-                                  final String unidadText = esPorPeso ? 'Kg' : 'unidades';
-                                  final String cappUnidadText = esPorPeso ? '/Kg' : '/unidad';
+                              // Calcular el costo total del inventario solo de los productos filtrados
+                              double costoTotalInventario = 0.0;
+                              for (var doc in filteredProducts) {
+                                final data = doc.data();
+                                final String productoId = doc.id;
+                                // --- CORRECCIÓN 4: Leer stock como double ---
+                                final double stockActual = (data['stock'] as num?)?.toDouble() ?? 0.0; 
+                                final double capp = _costosPromedio[productoId] ?? 0.0;
+                                
+                                costoTotalInventario += (stockActual * capp);
+                              }
 
-
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(vertical: 6.0),
-                                    elevation: 2,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            nombre,
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.teal[800],
+                              return Column(
+                                children: [
+                                  // Costo Total de Inventario Global (usando el total de los productos filtrados)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                    child: Card(
+                                      elevation: 4,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      color: Colors.blueGrey.shade100,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Costo Total de Inventario:',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.blueGrey[800],
+                                              ),
                                             ),
-                                          ),
-                                          const SizedBox(height: 5),
-                                          Text('Stock Actual: $stockText $unidadText'),
-                                          Text('Costo Promedio Ponderado (CAPP): \$${capp.toStringAsFixed(2)}$cappUnidadText'),
-                                          Text(
-                                            'Costo Total de Producto: \$${costoTotalProducto.toStringAsFixed(2)}',
-                                            style: const TextStyle(fontWeight: FontWeight.w600),
-                                          ),
-                                        ],
+                                            Text(
+                                              '\$${costoTotalInventario.toStringAsFixed(2)}',
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.blueGrey[900],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                                  ),
+                                  
+                                  // Lista de Productos (Filtrados)
+                                  Expanded(
+                                    child: ListView.builder(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                                      itemCount: filteredProducts.length,
+                                      itemBuilder: (context, index) {
+                                        final doc = filteredProducts[index];
+                                        final data = doc.data();
+                                        final String productoId = doc.id;
+                                        final String nombre = data['nombre'] ?? 'Sin Nombre';
+                                        // --- CORRECCIÓN 5: Leer stock y por_peso ---
+                                        final double stockActual = (data['stock'] as num?)?.toDouble() ?? 0.0;
+                                        final bool esPorPeso = data['por_peso'] ?? false;
+                                        
+                                        final double capp = _costosPromedio[productoId] ?? 0.0;
+                                        final double costoTotalProducto = stockActual * capp;
+
+                                        // Formato de stock y unidades
+                                        final String stockText = stockActual.toStringAsFixed(esPorPeso ? 2 : 0);
+                                        final String unidadText = esPorPeso ? 'Kg' : 'unidades';
+                                        final String cappUnidadText = esPorPeso ? '/Kg' : '/unidad';
+
+
+                                        return Card(
+                                          margin: const EdgeInsets.symmetric(vertical: 6.0),
+                                          elevation: 2,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(12.0),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  nombre,
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.teal[800],
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 5),
+                                                // Mostrar stock con decimales si es por peso
+                                                Text('Stock Actual: $stockText $unidadText'),
+                                                Text('Costo Promedio Ponderado (CAPP): \$${capp.toStringAsFixed(2)}$cappUnidadText'),
+                                                Text(
+                                                  'Costo Total de Producto: \$${costoTotalProducto.toStringAsFixed(2)}',
+                                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
             ),
     );

@@ -127,7 +127,7 @@ void _addProduct(DocumentSnapshot productDoc) {
           'id': productoId,
           'nombre': nombre,
           'precio': precio,
-          'cantidad': 1,
+          'cantidad': 1.0,
           'subtotal': precio,
           'es_por_peso': false,
           'exento_iva': esExentoIva, // Guardar estado IVA
@@ -267,7 +267,7 @@ void _addProduct(DocumentSnapshot productDoc) {
         final currentStock = (await docRef.get()).data()?['stock'] as num;
         
         // Se usa la cantidad (que puede ser decimal) para el descuento
-        final double newStock = currentStock.toDouble() - (item['cantidad'] as double); 
+        final double newStock = currentStock.toDouble() - (item['cantidad'] as num).toDouble(); 
         
         if (newStock < 0) {
           throw Exception('Stock insuficiente para ${item['nombre']}');
@@ -322,7 +322,7 @@ void _addProduct(DocumentSnapshot productDoc) {
     }
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -333,220 +333,229 @@ void _addProduct(DocumentSnapshot productDoc) {
         backgroundColor: Colors.blueAccent,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Column(
-        children: [
-          // Sección de Datos de Facturación (Ocultable)
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: ExpansionTile(
-                title: const Text('Datos del Cliente y Vendedor'),
-                leading: const Icon(Icons.person),
-                initiallyExpanded: false,
+      // FIX CLAVE 1: Envuelve el cuerpo en SingleChildScrollView para permitir desplazamiento.
+      body: SingleChildScrollView( 
+        child: Column(
+          children: [
+            // Sección de Datos de Facturación (Ocultable)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: ExpansionTile(
+                  title: const Text('Datos del Cliente y Vendedor'),
+                  leading: const Icon(Icons.person),
+                  initiallyExpanded: false,
+                  children: [
+                    TextFormField(
+                      controller: _clienteNombreCtrl,
+                      decoration: const InputDecoration(labelText: 'Nombre o Razón Social'),
+                      validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                    ),
+                    TextFormField(
+                      controller: _clienteCedulaRifCtrl,
+                      decoration: const InputDecoration(labelText: 'Cédula de Identidad / RIF'),
+                      validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                    ),
+                    TextFormField(
+                      controller: _clienteDireccionCtrl,
+                      decoration: const InputDecoration(labelText: 'Dirección Fiscal'),
+                      validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                    ),
+                    TextFormField(
+                      controller: _vendedorCtrl,
+                      decoration: const InputDecoration(labelText: 'Vendedor Atendió'),
+                      validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Sección de búsqueda de productos
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  labelText: 'Buscar producto',
+                  suffixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                  ),
+                ),
+              ),
+            ),
+            // FIX CLAVE 2: Usar SizedBox con altura fija en lugar de Expanded
+            SizedBox(
+              height: 250, // Altura limitada para la lista de productos disponibles
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _firestoreService.getCollection('productos', orderByField: 'nombre').snapshots(),
+                builder: (context, snapshot) {
+                  // ... (lógica de manejo de errores y carga)
+                  if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Text('No hay productos disponibles.'));
+
+                  final products = snapshot.data!.docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final nombre = data['nombre']?.toString().toLowerCase() ?? '';
+                    return nombre.contains(_searchQuery.toLowerCase());
+                  }).toList();
+
+                  return ListView.builder(
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      final data = product.data() as Map<String, dynamic>;
+                      final nombre = data['nombre'] ?? 'Desconocido';
+                      final stock = (data['stock'] as num?)?.toDouble() ?? 0.0; // Cambiado a double
+                      final precioDolar = (data['precio'] as num?)?.toDouble() ?? 0.0;
+                      final precioBolivar = precioDolar * _tasaDolar;
+                      final esPorPeso = data['por_peso'] ?? false; // Nuevo campo
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                        child: ListTile(
+                          leading: Icon(esPorPeso ? Icons.scale : Icons.inventory, color: Colors.blueAccent),
+                          title: Text(nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Stock: ${stock.toStringAsFixed(esPorPeso ? 2 : 0)} ${esPorPeso ? 'Kg' : 'unidades'}'),
+                              Text('Precio: \$${precioDolar.toStringAsFixed(2)} ${esPorPeso ? '/Kg' : '/u'}'),
+                              if (_tasaDolar > 0)
+                                Text('(${NumberFormat.currency(locale: 'es_VE', symbol: 'Bs').format(precioBolivar)} ${esPorPeso ? '/Kg' : '/u'})'),
+                            ],
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.add_shopping_cart, color: Colors.blueAccent),
+                            onPressed: stock > 0 ? () => _addProduct(product) : null,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            // Sección del carrito/pedido (Fija) - Contenedor principal del carrito
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextFormField(
-                    controller: _clienteNombreCtrl,
-                    decoration: const InputDecoration(labelText: 'Nombre o Razón Social'),
-                    validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                  const Text(
+                    'Detalle del Pedido',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  TextFormField(
-                    controller: _clienteCedulaRifCtrl,
-                    decoration: const InputDecoration(labelText: 'Cédula de Identidad / RIF'),
-                    validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                  if (_selectedProducts.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text('Aún no hay productos en el carrito.'),
+                    ),
+                  // FIX CLAVE 3: La lista de productos seleccionados tiene alto fijo y es scrollable
+                  SizedBox(
+                    height: 150, // Altura máxima fija de 150 píxeles
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: const AlwaysScrollableScrollPhysics(), // Permite el scroll
+                      itemCount: _selectedProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = _selectedProducts[index];
+                        final String productoId = product['id'];
+
+                        return FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance.collection('productos').doc(productoId).get(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData || !snapshot.data!.exists) {
+                              return const SizedBox.shrink();
+                            }
+                            final data = snapshot.data!.data() as Map<String, dynamic>;
+                            final double maxStock = (data['stock'] as num?)?.toDouble() ?? 0.0;
+                            final bool esPorPeso = product['es_por_peso'];
+
+                            return Card(
+                              color: Colors.blue.shade50,
+                              margin: const EdgeInsets.symmetric(vertical: 4.0),
+                              child: ListTile(
+                                title: Text(
+                                  '${product['nombre']} x${product['cantidad'].toStringAsFixed(esPorPeso ? 2 : 0)} ${esPorPeso ? 'Kg' : 'u'}',
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('\$${product['subtotal'].toStringAsFixed(2)}'),
+                                    if (_tasaDolar > 0)
+                                      Text('(${NumberFormat.currency(locale: 'es_VE', symbol: 'Bs').format(product['subtotal'] * _tasaDolar)})'),
+                                  ],
+                                ),
+                                trailing: esPorPeso
+                                    ? IconButton(
+                                        icon: const Icon(Icons.delete, color: Colors.red),
+                                        onPressed: () => _updateProductQuantity(index, 0, maxStock.toInt()),
+                                      )
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.remove_circle_outline),
+                                            onPressed: () {
+                                              _updateProductQuantity(index, product['cantidad'].toDouble() - 1, maxStock.toInt());
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.add_circle_outline),
+                                            onPressed: () {
+                                              _updateProductQuantity(index, product['cantidad'].toDouble() + 1, maxStock.toInt());
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                  TextFormField(
-                    controller: _clienteDireccionCtrl,
-                    decoration: const InputDecoration(labelText: 'Dirección Fiscal'),
-                    validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
-                  ),
-                  TextFormField(
-                    controller: _vendedorCtrl,
-                    decoration: const InputDecoration(labelText: 'Vendedor Atendió'),
-                    validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
-                  ),
+                  const Divider(),
+                  // Totales
+                  _buildTotalRow('Subtotal', _subtotalDolar),
+                  _buildTotalRow('Impuestos (16%)', _impuestosDolar),
+                  const Divider(),
+                  _buildTotalRow('Total', _totalDolar, isBold: true),
                   const SizedBox(height: 10),
+                  Center(
+                    child: ElevatedButton.icon(
+                      onPressed: _selectedProducts.isNotEmpty ? _confirmSale : null,
+                      icon: const Icon(Icons.check, color: Colors.white),
+                      label: const Text('Confirmar Pedido', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                        textStyle: const TextStyle(fontSize: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          
-          // Sección de búsqueda de productos
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                labelText: 'Buscar producto',
-                suffixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(15.0)),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _firestoreService.getCollection('productos', orderByField: 'nombre').snapshots(),
-              builder: (context, snapshot) {
-                // ... (lógica de manejo de errores y carga)
-                if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Text('No hay productos disponibles.'));
-
-                final products = snapshot.data!.docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final nombre = data['nombre']?.toString().toLowerCase() ?? '';
-                  return nombre.contains(_searchQuery.toLowerCase());
-                }).toList();
-
-                return ListView.builder(
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final product = products[index];
-                    final data = product.data() as Map<String, dynamic>;
-                    final nombre = data['nombre'] ?? 'Desconocido';
-                    final stock = (data['stock'] as num?)?.toDouble() ?? 0.0; // Cambiado a double
-                    final precioDolar = (data['precio'] as num?)?.toDouble() ?? 0.0;
-                    final precioBolivar = precioDolar * _tasaDolar;
-                    final esPorPeso = data['por_peso'] ?? false; // Nuevo campo
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                      child: ListTile(
-                        leading: Icon(esPorPeso ? Icons.scale : Icons.inventory, color: Colors.blueAccent),
-                        title: Text(nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Stock: ${stock.toStringAsFixed(esPorPeso ? 2 : 0)} ${esPorPeso ? 'Kg' : 'unidades'}'),
-                            Text('Precio: \$${precioDolar.toStringAsFixed(2)} ${esPorPeso ? '/Kg' : '/u'}'),
-                            if (_tasaDolar > 0)
-                              Text('(${NumberFormat.currency(locale: 'es_VE', symbol: 'Bs').format(precioBolivar)} ${esPorPeso ? '/Kg' : '/u'})'),
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.add_shopping_cart, color: Colors.blueAccent),
-                          onPressed: stock > 0 ? () => _addProduct(product) : null,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          // Sección del carrito/pedido (Fija)
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 10,
-                  offset: Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Detalle del Pedido',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                if (_selectedProducts.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text('Aún no hay productos en el carrito.'),
-                  ),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _selectedProducts.length,
-                  itemBuilder: (context, index) {
-                    final product = _selectedProducts[index];
-                    final String productoId = product['id'];
-
-                    return FutureBuilder<DocumentSnapshot>(
-                      future: FirebaseFirestore.instance.collection('productos').doc(productoId).get(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData || !snapshot.data!.exists) {
-                          return const SizedBox.shrink();
-                        }
-                        final data = snapshot.data!.data() as Map<String, dynamic>;
-                        final double maxStock = (data['stock'] as num?)?.toDouble() ?? 0.0;
-                        final bool esPorPeso = product['es_por_peso'];
-
-                        return Card(
-                          color: Colors.blue.shade50,
-                          margin: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: ListTile(
-                            title: Text(
-                              '${product['nombre']} x${product['cantidad'].toStringAsFixed(esPorPeso ? 2 : 0)} ${esPorPeso ? 'Kg' : 'u'}',
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('\$${product['subtotal'].toStringAsFixed(2)}'),
-                                if (_tasaDolar > 0)
-                                  Text('(${NumberFormat.currency(locale: 'es_VE', symbol: 'Bs').format(product['subtotal'] * _tasaDolar)})'),
-                              ],
-                            ),
-                            trailing: esPorPeso // No permitimos modificar peso con botones, solo eliminación
-                                ? IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () => _updateProductQuantity(index, 0, maxStock.toInt()), // Elimina al presionar
-                                  )
-                                : Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.remove_circle_outline),
-                                        onPressed: () {
-                                          _updateProductQuantity(index, product['cantidad'].toDouble() - 1, maxStock.toInt());
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.add_circle_outline),
-                                        onPressed: () {
-                                          _updateProductQuantity(index, product['cantidad'].toDouble() + 1, maxStock.toInt());
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-                const Divider(),
-                // Totales
-                _buildTotalRow('Subtotal', _subtotalDolar),
-                _buildTotalRow('Impuestos (16%)', _impuestosDolar),
-                const Divider(),
-                _buildTotalRow('Total', _totalDolar, isBold: true),
-                const SizedBox(height: 10),
-                Center(
-                  child: ElevatedButton.icon(
-                    onPressed: _selectedProducts.isNotEmpty ? _confirmSale : null,
-                    icon: const Icon(Icons.check, color: Colors.white),
-                    label: const Text('Confirmar Pedido', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                      textStyle: const TextStyle(fontSize: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

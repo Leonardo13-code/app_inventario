@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:app_inventario/services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Necesario para DocumentSnapshot
+import 'package:flutter/services.dart'; // Necesario para FilteringTextInputFormatter (ya presente en el dialogo)
 
 class GestionProductosPage extends StatefulWidget {
   const GestionProductosPage({super.key});
@@ -12,6 +13,25 @@ class GestionProductosPage extends StatefulWidget {
 
 class _GestionProductosPageState extends State<GestionProductosPage> {
   final FirestoreService _firestoreService = FirestoreService();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = ''; // Almacena la consulta de búsqueda
+
+  @override
+  void initState() {
+    super.initState();
+    // Escuchar cambios en la barra de búsqueda
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,76 +44,122 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
         backgroundColor: Colors.purple,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: _firestoreService.getCollection('productos', orderByField: 'nombre').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No hay productos registrados. Agrega uno!'));
-          }
+      // Envolvemos el cuerpo en Column para añadir la barra de búsqueda
+      body: Column(
+        children: [
+          // --- BARRA DE BÚSQUEDA AGREGADA ---
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Buscar producto por nombre',
+                suffixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                ),
+              ),
+            ),
+          ),
+          
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _firestoreService.getCollection('productos', orderByField: 'nombre').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          final productos = snapshot.data!.docs;
+                final allProducts = snapshot.data!.docs;
+                
+                // --- LÓGICA DE FILTRADO ---
+                final filteredProducts = allProducts.where((doc) {
+                  final data = doc.data();
+                  final nombre = data['nombre']?.toString().toLowerCase() ?? '';
+                  return nombre.contains(_searchQuery);
+                }).toList();
+                
+                if (filteredProducts.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search_off, size: 80, color: Colors.grey[400]),
+                          const SizedBox(height: 10),
+                          Text(
+                            _searchQuery.isEmpty ? 'No hay productos registrados.' : 'No se encontraron productos para "$_searchQuery".',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 18, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(10.0),
-            itemCount: productos.length,
-            itemBuilder: (context, index) {
-              final productoDoc = productos[index];
-              final data = productoDoc.data();
-              final String nombre = data['nombre'] ?? 'Sin Nombre';
-              final double precio = (data['precio'] as num?)?.toDouble() ?? 0.0;
-              final double stock = (data['stock'] as num?)?.toDouble() ?? 0.0;
-              final bool esPorPeso = data['por_peso'] ?? false;
-              final bool esExentoIva = data['exento_iva'] ?? false; // NUEVO CAMPO
+                return ListView.builder(
+                  padding: const EdgeInsets.all(10.0),
+                  itemCount: filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    final productoDoc = filteredProducts[index];
+                    final data = productoDoc.data();
+                    final String nombre = data['nombre'] ?? 'Sin Nombre';
+                    final double precio = (data['precio'] as num?)?.toDouble() ?? 0.0;
+                    final double stock = (data['stock'] as num?)?.toDouble() ?? 0.0;
+                    final bool esPorPeso = data['por_peso'] ?? false;
+                    final bool esExentoIva = data['exento_iva'] ?? false; 
 
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
-                elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                child: ListTile(
-                  leading: Icon(esPorPeso ? Icons.scale : Icons.inventory_2, color: Colors.purple),
-                  title: Text(
-                    nombre,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Precio: \$${precio.toStringAsFixed(2)} ${esPorPeso ? '/Kg' : '/u'}'),
-                      Text('Stock: ${stock.toStringAsFixed(esPorPeso ? 2 : 0)} ${esPorPeso ? 'Kg' : 'unidades'}'),
-                      Text(
-                        esExentoIva ? 'EXENTO DE IVA' : 'APLICA IVA (16%)', // Mostrar estado IVA
-                        style: TextStyle(
-                          fontStyle: FontStyle.italic, 
-                          color: esExentoIva ? Colors.orange : Colors.green,
-                          fontWeight: FontWeight.w600,
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: ListTile(
+                        leading: Icon(esPorPeso ? Icons.scale : Icons.inventory_2, color: Colors.purple),
+                        title: Text(
+                          nombre,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Precio: \$${precio.toStringAsFixed(2)} ${esPorPeso ? '/Kg' : '/u'}'),
+                            Text('Stock: ${stock.toStringAsFixed(esPorPeso ? 2 : 0)} ${esPorPeso ? 'Kg' : 'unidades'}'),
+                            Text(
+                              esExentoIva ? 'EXENTO DE IVA' : 'APLICA IVA (16%)', 
+                              style: TextStyle(
+                                fontStyle: FontStyle.italic, 
+                                color: esExentoIva ? Colors.orange : Colors.green,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _editarProducto(productoDoc),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _confirmarEliminarProducto(productoDoc.id, nombre),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _editarProducto(productoDoc),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _confirmarEliminarProducto(productoDoc.id, nombre),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _agregarProducto,
@@ -104,6 +170,8 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
       ),
     );
   }
+
+  // --- MÉTODOS Y CLASES AUXILIARES (DEBEN MANTENERSE AL FINAL DEL ARCHIVO) ---
 
   // Método para agregar un nuevo producto
   void _agregarProducto() {
@@ -221,7 +289,6 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
 
   // Método para confirmar la eliminación de un producto (sin cambios)
   void _confirmarEliminarProducto(String productId, String productName) {
-    // ... (Tu función _confirmarEliminarProducto permanece igual)
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -259,15 +326,14 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
   }
 }
 
-// Diálogo reutilizable para agregar/editar producto - ACTUALIZADO
+// Diálogo reutilizable para agregar/editar producto - (MANTENIDO IGUAL)
 class _ProductoFormDialog extends StatefulWidget {
   final String title;
   final String? nombreInicial;
   final double? precioInicial;
   final double? stockInicial;
   final bool? esPorPesoInicial;
-  final bool? exentoIvaInicial; // NUEVO CAMPO
-  // Añadida la variable 'exentoIva' a la firma de onSave
+  final bool? exentoIvaInicial; 
   final Future<bool> Function(String nombre, double precio, double stock, bool esPorPeso, bool exentoIva) onSave; 
 
   const _ProductoFormDialog({
@@ -276,7 +342,7 @@ class _ProductoFormDialog extends StatefulWidget {
     this.precioInicial,
     this.stockInicial,
     this.esPorPesoInicial,
-    this.exentoIvaInicial, // Recibir valor inicial
+    this.exentoIvaInicial, 
     required this.onSave,
   });
 
@@ -290,7 +356,7 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
   late TextEditingController _precioController;
   late TextEditingController _stockController;
   late bool _esPorPeso;
-  late bool _esExentoIva; // NUEVA VARIABLE DE ESTADO
+  late bool _esExentoIva; 
 
   @override
   void initState() {
@@ -299,7 +365,7 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
     _precioController = TextEditingController(text: widget.precioInicial?.toString());
     _stockController = TextEditingController(text: widget.stockInicial?.toStringAsFixed(2)); 
     _esPorPeso = widget.esPorPesoInicial ?? false;
-    _esExentoIva = widget.exentoIvaInicial ?? false; // Inicializar
+    _esExentoIva = widget.exentoIvaInicial ?? false; 
   }
 
   @override
@@ -330,7 +396,10 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
               ),
               TextFormField(
                 controller: _precioController,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true), // Asegurar decimales para precio
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
                 decoration: InputDecoration(labelText: 'Precio en USD ${ _esPorPeso ? ' (por Kg)' : ' (por unidad)'}'),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'El precio es requerido';
@@ -341,7 +410,10 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
               ),
               TextFormField(
                 controller: _stockController,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true), // Asegurar decimales para stock
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
                 decoration: InputDecoration(labelText: 'Stock Inicial (${ _esPorPeso ? 'Kg' : 'unidades'})'),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'El stock inicial es requerido';
@@ -372,7 +444,7 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
                   ),
                 ],
               ),
-              // NUEVO SWITCH PARA 'EXENTO DE IVA'
+              // SWITCH PARA 'EXENTO DE IVA'
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -404,7 +476,7 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
                 double.tryParse(_precioController.text.trim()) ?? 0.0,
                 double.tryParse(_stockController.text.trim()) ?? 0.0,
                 _esPorPeso,
-                _esExentoIva, // Enviamos el valor del switch de IVA
+                _esExentoIva, 
               );
               if (mounted && saved) {
                 Navigator.pop(context);
@@ -418,7 +490,7 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
   }
 }
 
-// Función auxiliar para mostrar el diálogo de producto - ACTUALIZADA
+// Función auxiliar para mostrar el diálogo de producto - (MANTENIDO IGUAL)
 void _mostrarDialogoProducto(
   BuildContext context, {
   required String title,
@@ -426,8 +498,7 @@ void _mostrarDialogoProducto(
   double? precioInicial,
   double? stockInicial,
   bool? esPorPesoInicial,
-  bool? exentoIvaInicial, // NUEVO CAMPO
-  // NUEVA FIRMA
+  bool? exentoIvaInicial, 
   required Future<bool> Function(String nombre, double precio, double stock, bool esPorPeso, bool exentoIva) onSave, 
 }) {
   showDialog(
@@ -438,7 +509,7 @@ void _mostrarDialogoProducto(
       precioInicial: precioInicial,
       stockInicial: stockInicial,
       esPorPesoInicial: esPorPesoInicial,
-      exentoIvaInicial: exentoIvaInicial, // Pasar valor
+      exentoIvaInicial: exentoIvaInicial, 
       onSave: onSave,
     ),
   );

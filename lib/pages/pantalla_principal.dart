@@ -1,7 +1,9 @@
 // lib/pages/pantalla_principal.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Mantener para el user.email
-import 'package:app_inventario/services/auth_service.dart'; // Importar el servicio de autenticación
+import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:app_inventario/services/auth_service.dart'; 
+
+// Importa todas tus páginas de navegación
 import 'package:app_inventario/pages/productos_page.dart';
 import 'package:app_inventario/pages/historial_page.dart';
 import 'package:app_inventario/pages/moneda_page.dart';
@@ -11,6 +13,7 @@ import 'package:app_inventario/pages/salida_page.dart';
 import 'package:app_inventario/pages/costos_page.dart';
 import 'package:app_inventario/pages/venta_page.dart';
 import 'package:app_inventario/pages/historial_ventas_page.dart';
+// ¡Asegúrate de que tus imports estén completos!
 
 class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({super.key});
@@ -20,294 +23,159 @@ class PantallaPrincipal extends StatefulWidget {
 }
 
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
-  final AuthService _authService = AuthService(); // Instancia del servicio de autenticación
+  final AuthService _authService = AuthService();
+  final String _userEmail = FirebaseAuth.instance.currentUser?.email ?? 'Usuario';
 
   Future<void> _logout() async {
     try {
       await _authService.signOut();
       if (mounted) {
-        // Redireccionar al AuthGate que manejará el estado de autenticación
-        // y mostrará LoginPage si no hay usuario.
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Sesión cerrada correctamente.")),
-        );
+        Navigator.of(context).pushReplacementNamed('/login');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error al cerrar sesión: ${e.toString()}")),
+          SnackBar(content: Text('Error al cerrar sesión: $e')),
         );
       }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Inventario App',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.teal, // Color de la barra de app
-        elevation: 0, // Sin sombra
-        actions: [
-          IconButton(
-            onPressed: _logout, // Usar el método del servicio
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Cerrar sesión',
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.teal,
-              Colors.tealAccent,
+  // --- NUEVO WIDGET AUXILIAR: Tarjeta de Acceso Minimalista ---
+  Widget _buildAccessCard({
+    required String title,
+    required IconData icon,
+    required Color color, // Usaremos este color como acento
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 3, // Sombra suave para darle un aspecto de tarjeta
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 32, color: color), // Ícono con color de acento
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF212529), // Texto oscuro
+                ),
+              ),
             ],
           ),
         ),
-        child: Column(
-          children: [
-            // Sección de Bienvenida e Información Resumida (Placeholder por ahora)
-            _buildWelcomeSection(),
-            // Cuadrícula de Opciones de Menú
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  children: [
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.inventory_2,
-                      title: "Productos",
-                      subtitle: "Ver stock actual",
-                      color: Colors.blueAccent,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ProductosPage()),
-                        );
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.shopping_cart,
-                      title: "Ventas y Pedidos",
-                      subtitle: "Registrar ventas y generar facturas",
-                      color: const Color.fromARGB(255, 41, 193, 231),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const VentaPage()),
-                        );
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.add_shopping_cart,
-                      title: "Entradas",
-                      subtitle: "Registrar nuevos productos",
-                      color: Colors.green,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const EntradaPage()),
-                        );
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.remove_shopping_cart, // Ícono para salida
-                      title: "Salidas",
-                      subtitle: "Registrar salida de productos", // Nuevo subtítulo
-                      color: Colors.red, // Color para salidas
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SalidaPage()),
-                        );
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.history,
-                      title: "Historial de Entradas y Salidas",
-                      subtitle: "Ver movimientos recientes",
-                      color: Colors.orangeAccent,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const HistorialPage()),
-                        );
-                      },
-                    ),
+      ),
+    );
+  }
 
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.history,
-                      title: "Historial de Ventas",
-                      subtitle: "Revisar ventas anteriores y facturar",
-                      color: const Color.fromARGB(255, 245, 209, 4), 
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const HistorialVentasPage()),
-                        );
-                      },
-                    ),
+  @override
+  Widget build(BuildContext context) {
+    // Definición de las opciones de menú agrupadas
+    final List<Map<String, dynamic>> menuOptions = [
+      // 1. GESTIÓN E INVENTARIO
+      {'title': 'Inventario', 'page': const ProductosPage(), 'icon': Icons.inventory, 'color': const Color(0xFF1976D2)},
+      {'title': 'Gestionar Productos', 'page': const GestionProductosPage(), 'icon': Icons.category, 'color': Colors.purple},
+      {'title': 'Cálculo de Costos', 'page': const CostosPage(), 'icon': Icons.account_tree, 'color': Colors.teal},
+      // 2. MOVIMIENTOS
+      {'title': 'Registrar Entrada', 'page': const EntradaPage(), 'icon': Icons.arrow_downward, 'color': const Color(0xFF388E3C)},
+      {'title': 'Registrar Salida', 'page': const SalidaPage(), 'icon': Icons.arrow_upward, 'color': const Color(0xFFD32F2F)},
+      {'title': 'Historial Movimientos', 'page': const HistorialPage(), 'icon': Icons.history, 'color': Colors.orange},
+      // 3. VENTAS Y FINANZAS
+      {'title': 'Registrar Venta', 'page': const VentaPage(), 'icon': Icons.shopping_cart, 'color': Colors.pink},
+      {'title': 'Historial de Ventas', 'page': const HistorialVentasPage(), 'icon': Icons.receipt, 'color': Colors.indigo},
+      {'title': 'Conversor Moneda', 'page': const MonedaPage(), 'icon': Icons.monetization_on, 'color': Colors.brown},
+    ];
 
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.attach_money,
-                      title: "Moneda",
-                      subtitle: "Convertir y gestionar tasas",
-                      color: Colors.purpleAccent,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const MonedaPage()),
-                        );
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.calculate,
-                      title: "Costos",
-                      subtitle: "Calcular el costo del inventario", // Nuevo subtítulo
-                      color: Colors.blueGrey, // Nuevo color
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const CostosPage()),
-                        );
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.add_box_outlined, // Un icono que sugiera "crear" o "gestionar" un elemento
-                      title: "Gestionar Productos",
-                      subtitle: "Crear o editar artículos",
-                      color: Colors.purple, // Un color distinto para esta sección
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const GestionProductosPage()),
-                        );
-                      },
-                    ),
-                  ],
+    // Usaremos un fondo blanco/gris muy claro para el minimalismo
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA), // Fondo Gris Muy Claro
+      appBar: AppBar(
+        title: const Text(
+          'INVENTARIO APP',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1976D2), // Color de Acción
+        elevation: 0, // Eliminar la sombra de la barra
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.exit_to_app, color: Colors.white),
+            onPressed: _logout,
+            tooltip: 'Cerrar Sesión',
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- BIENVENIDA / TARJETA DE USUARIO ---
+              Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                color: Colors.white,
+                child: ListTile(
+                  leading: const Icon(Icons.person, color: Color(0xFF1976D2)),
+                  title: const Text('Bienvenido', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(_userEmail),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --- Widgets Auxiliares para la Interfaz ---
-
-  Widget _buildWelcomeSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.teal.shade700,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Hola,",
-            style: TextStyle(
-              fontSize: 20,
-              color: Colors.white70,
-            ),
-          ),
-          Text(
-            FirebaseAuth.instance.currentUser?.email ?? "Usuario", // Muestra el correo o "Usuario"
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 15),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(
-      BuildContext context, {
-        required IconData icon,
-        required String title,
-        required String subtitle,
-        required Color color,
-        required VoidCallback onTap,
-      }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        color: Colors.white, // Color de fondo de la tarjeta
-        elevation: 6, // Sombra más pronunciada
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [color.withAlpha((255 * 0.8).round()), color],
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0), // Ajuste de padding de 16.0 a 12.0
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: 40, color: Colors.white), // Tamaño del icono ajustado de 48 a 40
-                const SizedBox(height: 8), // Ajuste de espacio de 10 a 8
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16, // Ajuste de tamaño de fuente de 18 a 16
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+              
+              const SizedBox(height: 24),
+              
+              // --- TÍTULO DE SECCIÓN DE MÓDULOS ---
+              const Text(
+                'Módulos de Acceso Rápido',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF212529),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 11, // Ajuste de tamaño de fuente de 12 a 11
-                    color: Colors.white70,
-                  ),
-                  overflow: TextOverflow.ellipsis, // Asegurar que el texto largo se trunca
-                  maxLines: 2, // Permitir hasta 2 líneas para el subtítulo
+              ),
+              
+              const Divider(height: 20, thickness: 1, color: Colors.black12),
+              
+              // --- GRID VIEW DE LAS TARJETAS DE ACCESO ---
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: menuOptions.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2, // 2 columnas
+                  crossAxisSpacing: 12.0, // Espacio horizontal generoso
+                  mainAxisSpacing: 12.0,  // Espacio vertical generoso
+                  childAspectRatio: 1.3, // Controla la altura de las tarjetas
                 ),
-              ],
-            ),
+                itemBuilder: (context, index) {
+                  final option = menuOptions[index];
+                  return _buildAccessCard(
+                    title: option['title'],
+                    icon: option['icon'],
+                    color: option['color'],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => option['page']),
+                      );
+                    },
+                  );
+                },
+              ),
+              
+              const SizedBox(height: 30),
+              
+              // Aquí podrías añadir un pie de página o un indicador de versión si lo deseas.
+            ],
           ),
         ),
       ),
