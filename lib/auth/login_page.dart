@@ -1,7 +1,7 @@
 // lib/auth/login_page.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Mantener para el error handling específico
-import 'package:app_inventario/services/auth_service.dart'; // Importar el servicio
+import 'package:InVen/services/auth_service.dart'; // Importar el servicio
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

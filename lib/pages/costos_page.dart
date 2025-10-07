@@ -1,7 +1,7 @@
 // lib/pages/costos_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:app_inventario/services/firestore_service.dart';
+import 'package:InVen/services/firestore_service.dart';
 
 class CostosPage extends StatefulWidget {
   const CostosPage({super.key});
@@ -134,8 +134,6 @@ class CostosPageState extends State<CostosPage> {
           'Costos de Inventario',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.blueGrey,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

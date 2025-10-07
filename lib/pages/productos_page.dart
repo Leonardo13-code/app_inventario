@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app_inventario/services/firestore_service.dart';
+import 'package:InVen/services/firestore_service.dart';
 
 class ProductosPage extends StatefulWidget {
   const ProductosPage({super.key});
@@ -49,8 +49,6 @@ class _ProductosPageState extends State<ProductosPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Productos', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: Colors.blueAccent,
-        iconTheme: const IconThemeData(color: Colors.white),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60.0),
           child: Padding(
@@ -59,7 +57,7 @@ class _ProductosPageState extends State<ProductosPage> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Buscar producto...',
-                hintStyle: const TextStyle(color: Colors.white70),
+                hintStyle: const TextStyle(color: Colors.white),
                 prefixIcon: const Icon(Icons.search, color: Colors.white),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10.0),

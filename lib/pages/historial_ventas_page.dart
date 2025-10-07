@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart'; 
 // Asegúrate de que esta clase exista y tenga el constructor fromFirestore
-import 'package:app_inventario/utils/pdf_generator.dart'; 
+import 'package:InVen/utils/pdf_generator.dart'; 
 
 class HistorialVentasPage extends StatefulWidget {
   const HistorialVentasPage({super.key});

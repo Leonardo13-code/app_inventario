@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // ¡Necesario para la autenticación!
 import 'package:intl/intl.dart';
-import 'package:app_inventario/services/firestore_service.dart';
+import 'package:InVen/services/firestore_service.dart';
 
 class HistorialPage extends StatefulWidget {
   const HistorialPage({super.key});
@@ -355,8 +355,6 @@ class _HistorialPageState extends State<HistorialPage> {
           'Historial de Movimientos',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.orangeAccent,
-        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.cleaning_services, color: Colors.white),

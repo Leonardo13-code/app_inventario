@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Necesario para FilteringTextInputFormatter
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:app_inventario/services/firestore_service.dart';
+import 'package:InVen/services/firestore_service.dart';
 
 class SalidaPage extends StatefulWidget {
   const SalidaPage({super.key});
@@ -148,7 +148,7 @@ class SalidaPageState extends State<SalidaPage> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(14.0),
         child: Form(
           key: _formKey,
           child: Column(

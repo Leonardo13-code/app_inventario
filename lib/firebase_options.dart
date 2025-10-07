@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '267305482824',
     projectId: 'app-inventario-e3d70',
     storageBucket: 'app-inventario-e3d70.firebasestorage.app',
-    iosBundleId: 'com.example.appInventario',
+    iosBundleId: 'com.example.InVen',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '267305482824',
     projectId: 'app-inventario-e3d70',
     storageBucket: 'app-inventario-e3d70.firebasestorage.app',
-    iosBundleId: 'com.example.appInventario',
+    iosBundleId: 'com.example.InVen',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

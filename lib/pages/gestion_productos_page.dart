@@ -1,6 +1,6 @@
 // lib/pages/gestion_productos_page.dart
 import 'package:flutter/material.dart';
-import 'package:app_inventario/services/firestore_service.dart';
+import 'package:InVen/services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Necesario para DocumentSnapshot
 import 'package:flutter/services.dart'; // Necesario para FilteringTextInputFormatter (ya presente en el dialogo)
 
@@ -41,8 +41,6 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
           'Gestionar Productos',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.purple,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       // Envolvemos el cuerpo en Column para añadir la barra de búsqueda
       body: Column(
@@ -119,7 +117,7 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
                       elevation: 3,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       child: ListTile(
-                        leading: Icon(esPorPeso ? Icons.scale : Icons.inventory_2, color: Colors.purple),
+                        leading: Icon(esPorPeso ? Icons.scale : Icons.inventory_2, color: Colors.blue.shade700,),
                         title: Text(
                           nombre,
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -163,7 +161,7 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _agregarProducto,
-        backgroundColor: Colors.purple.shade700,
+        backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
         tooltip: 'Agregar Nuevo Producto',
         child: const Icon(Icons.add),

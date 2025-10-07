@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Importación para formatos de entrada
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:app_inventario/services/firestore_service.dart';
+import 'package:InVen/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -330,8 +330,6 @@ void _addProduct(DocumentSnapshot productDoc) {
           'Nuevo Pedido',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.blueAccent,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       // FIX CLAVE 1: Envuelve el cuerpo en SingleChildScrollView para permitir desplazamiento.
       body: SingleChildScrollView( 
