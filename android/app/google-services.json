@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:267305482824:android:283e93f404563594c9b67d",
+        "mobilesdk_app_id": "1:267305482824:android:c4411e970e81276ec9b67d",
         "android_client_info": {
-          "package_name": "com.InventarioApp.Proyecto"
+          "package_name": "com.example.app_inventario"
         }
       },
       "oauth_client": [],
@@ -26,9 +26,9 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:267305482824:android:c4411e970e81276ec9b67d",
+        "mobilesdk_app_id": "1:267305482824:android:93f7d9dfaf257c22c9b67d",
         "android_client_info": {
-          "package_name": "com.example.app_inventario"
+          "package_name": "com.gestiones.InVen"
         }
       },
       "oauth_client": [],

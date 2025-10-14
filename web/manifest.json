@@ -1,6 +1,6 @@
 {
-    "name": "app_inventario",
-    "short_name": "app_inventario",
+    "name": "InVen",
+    "short_name": "InVen",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
