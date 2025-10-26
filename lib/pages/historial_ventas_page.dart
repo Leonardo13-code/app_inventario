@@ -45,7 +45,7 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Por seguridad, ingrese su contraseña para confirmar la eliminación de historial de ventas (${userEmail}):'),
+              Text('Por seguridad, ingrese su contraseña para confirmar la eliminación de historial de ventas ($userEmail):'),
               const SizedBox(height: 10),
               TextField(
                 onChanged: (value) => password = value,

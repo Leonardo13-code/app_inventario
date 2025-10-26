@@ -180,7 +180,7 @@ class SalidaPageState extends State<SalidaPage> {
                       prefixIcon: const Icon(Icons.inventory),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    value: _selectedProductId,
+                    initialValue: _selectedProductId,
                     items: dropdownItems,
                     onChanged: (String? newValue) {
                       setState(() {

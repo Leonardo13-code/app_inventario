@@ -152,7 +152,7 @@ void _addProduct(DocumentSnapshot productDoc) {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Ingresar Cantidad de ${nombre}'),
+          title: Text('Ingresar Cantidad de $nombre'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

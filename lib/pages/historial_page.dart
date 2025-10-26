@@ -47,7 +47,7 @@ class _HistorialPageState extends State<HistorialPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Por seguridad, ingrese su contraseña para confirmar la eliminación de historial (${userEmail}):'),
+              Text('Por seguridad, ingrese su contraseña para confirmar la eliminación de historial ($userEmail):'),
               const SizedBox(height: 10),
               TextField(
                 onChanged: (value) => password = value,
@@ -458,7 +458,7 @@ class _HistorialPageState extends State<HistorialPage> {
                       final String cantidadText = cantidad.abs().toStringAsFixed(cantidad.abs() == cantidad.abs().truncateToDouble() ? 0 : 2);
                       final String costoTotal = (cantidad.abs() * costoUnitario).toStringAsFixed(2);
                       
-                      final String costoTotalDisplay = '\$${costoTotal}';
+                      final String costoTotalDisplay = '\$$costoTotal';
 
                       return Card(
                         color: color,
