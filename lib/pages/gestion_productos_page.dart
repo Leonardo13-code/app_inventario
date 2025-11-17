@@ -1,8 +1,8 @@
 // lib/pages/gestion_productos_page.dart
 import 'package:flutter/material.dart';
 import 'package:InVen/services/firestore_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Necesario para DocumentSnapshot
-import 'package:flutter/services.dart'; // Necesario para FilteringTextInputFormatter (ya presente en el dialogo)
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 
 class GestionProductosPage extends StatefulWidget {
   const GestionProductosPage({super.key});
@@ -14,7 +14,7 @@ class GestionProductosPage extends StatefulWidget {
 class _GestionProductosPageState extends State<GestionProductosPage> {
   final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = ''; // Almacena la consulta de búsqueda
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -42,10 +42,9 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
-      // Envolvemos el cuerpo en Column para añadir la barra de búsqueda
       body: Column(
         children: [
-          // --- BARRA DE BÚSQUEDA AGREGADA ---
+          // --- BARRA DE BÚSQUEDA ---
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -169,14 +168,13 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
     );
   }
 
-  // --- MÉTODOS Y CLASES AUXILIARES (DEBEN MANTENERSE AL FINAL DEL ARCHIVO) ---
+  // --- MÉTODOS Y CLASES AUXILIARES ---
 
   // Método para agregar un nuevo producto
   void _agregarProducto() {
     _mostrarDialogoProducto(
       context,
       title: 'Agregar Nuevo Producto',
-      // Añadida exentoIva a la firma de onSave
       onSave: (nombre, precio, stock, esPorPeso, exentoIva) async { 
         try {
           final existingProducts = await _firestoreService.getCollectionOnce(
@@ -201,7 +199,7 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
             'precio': precio,
             'stock': stock.toDouble(),
             'por_peso': esPorPeso,
-            'exento_iva': exentoIva, // NUEVO CAMPO A GUARDAR
+            'exento_iva': exentoIva,
           });
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -229,7 +227,7 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
     final double currentPrecio = (data?['precio'] as num?)?.toDouble() ?? 0.0;
     final double currentStock = (data?['stock'] as num?)?.toDouble() ?? 0.0;
     final bool currentEsPorPeso = data?['por_peso'] ?? false;
-    final bool currentExentoIva = data?['exento_iva'] ?? false; // NUEVO CAMPO
+    final bool currentExentoIva = data?['exento_iva'] ?? false;
 
     _mostrarDialogoProducto(
       context,
@@ -238,8 +236,7 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
       precioInicial: currentPrecio,
       stockInicial: currentStock,
       esPorPesoInicial: currentEsPorPeso,
-      exentoIvaInicial: currentExentoIva, // PASAR VALOR INICIAL
-      // Añadida exentoIva a la firma de onSave
+      exentoIvaInicial: currentExentoIva,
       onSave: (nombre, precio, stock, esPorPeso, exentoIva) async { 
         try {
           final existingProducts = await _firestoreService.getCollectionOnce(
@@ -265,7 +262,7 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
             'precio': precio,
             'stock': stock.toDouble(),
             'por_peso': esPorPeso,
-            'exento_iva': exentoIva, // NUEVO CAMPO A ACTUALIZAR
+            'exento_iva': exentoIva,
           });
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -285,7 +282,7 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
     );
   }
 
-  // Método para confirmar la eliminación de un producto (sin cambios)
+  // Método para confirmar la eliminación de un producto
   void _confirmarEliminarProducto(String productId, String productName) {
     showDialog(
       context: context,
@@ -324,7 +321,7 @@ class _GestionProductosPageState extends State<GestionProductosPage> {
   }
 }
 
-// Diálogo reutilizable para agregar/editar producto - (MANTENIDO IGUAL)
+// Diálogo para agregar/editar producto
 class _ProductoFormDialog extends StatefulWidget {
   final String title;
   final String? nombreInicial;
@@ -394,7 +391,7 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
               ),
               TextFormField(
                 controller: _precioController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true), // Asegurar decimales para precio
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
@@ -408,7 +405,7 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
               ),
               TextFormField(
                 controller: _stockController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true), // Asegurar decimales para stock
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
@@ -488,7 +485,7 @@ class _ProductoFormDialogState extends State<_ProductoFormDialog> {
   }
 }
 
-// Función auxiliar para mostrar el diálogo de producto - (MANTENIDO IGUAL)
+// Función auxiliar para mostrar el diálogo de producto
 void _mostrarDialogoProducto(
   BuildContext context, {
   required String title,

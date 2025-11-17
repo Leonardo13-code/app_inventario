@@ -13,8 +13,9 @@ class ProductosPage extends StatefulWidget {
 
 class _ProductosPageState extends State<ProductosPage> {
   final FirestoreService _firestoreService = FirestoreService();
-  double? _tasaConversion; // Renombrado a _tasaConversion para mayor claridad
-  final int _stockBajoUmbral = 10;
+  double? _tasaConversion;
+  int _currentStockUmbral = 10; 
+  final int _defaultStockUmbral = 10;
   final TextEditingController _searchController = TextEditingController();
   String _searchText = '';
 
@@ -22,12 +23,24 @@ class _ProductosPageState extends State<ProductosPage> {
   void initState() {
     super.initState();
     _cargarTasaConversion();
+    _loadStockUmbral();
     _searchController.addListener(() {
       setState(() {
         _searchText = _searchController.text.toLowerCase();
       });
     });
   }
+
+  // Método para cargar el umbral de stock desde SharedPreferences
+  Future<void> _loadStockUmbral() async {
+  final prefs = await SharedPreferences.getInstance();
+  final int umbral = prefs.getInt('stock_bajo_umbral') ?? _defaultStockUmbral;
+  if (mounted) {
+    setState(() {
+      _currentStockUmbral = umbral;
+    });
+  }
+}
 
   // --- NUEVO: Método para cargar la tasa de conversión ---
   Future<void> _cargarTasaConversion() async {
@@ -95,9 +108,22 @@ class _ProductosPageState extends State<ProductosPage> {
             itemBuilder: (context, index) {
               final product = filteredDocs[index].data() as Map<String, dynamic>;
               final String nombre = product['nombre'] ?? 'Sin nombre';
-              final double precioUSD = (product['precio'] ?? 0.0).toDouble();
-              final int stock = (product['stock'] ?? 0).toInt();
-              final bool isStockBajo = stock <= _stockBajoUmbral;
+              final double precioUSD = (product['precio'] as num?)?.toDouble() ?? 0.0;
+              final double stock = (product['stock'] as num?)?.toDouble() ?? 0.0;
+              final bool esPorPeso = product['por_peso'] as bool? ?? false;
+
+            String stockText;
+            String unidadText = esPorPeso ? 'Kg' : 'Und.';
+
+            // Si es por peso, muestra decimales (ej: 7.5 Kg). Si es por unidad, muestra entero (ej: 10 Und.)
+            if (esPorPeso) {
+              stockText = stock.toStringAsFixed(2);
+            } else {
+              // Si es una unidad entera, no muestres decimales
+              stockText = stock.toStringAsFixed(stock.remainder(1) == 0 ? 0 : 2);
+            }
+
+              final isStockBajo = stock > 0 && stock <= _currentStockUmbral;
 
               // Calcula el precio en Bs, asegurando que _tasaConversion no sea nula
               final double precioBs = precioUSD * (_tasaConversion ?? 0.0);
@@ -125,7 +151,7 @@ class _ProductosPageState extends State<ProductosPage> {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              'Stock: $stock ${isStockBajo ? '(¡Bajo!)' : ''}',
+                              'Stock: $stockText $unidadText ${isStockBajo ? '(¡Bajo!)' : ''}',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: isStockBajo ? Colors.red : Colors.green.shade700,

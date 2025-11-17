@@ -1,6 +1,6 @@
 // lib/pages/entrada_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Necesario para FilteringTextInputFormatter
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:InVen/services/firestore_service.dart';
@@ -26,7 +26,7 @@ class EntradaPageState extends State<EntradaPage> {
 
   String? _selectedProductId;
   String? _selectedProductName;
-  bool _isProductPorPeso = false; // Nueva variable para mostrar si es por peso
+  bool _isProductPorPeso = false;
 
   bool _isLoading = false;
 
@@ -46,12 +46,11 @@ class EntradaPageState extends State<EntradaPage> {
     return _firestoreService.getCollection('productos', orderByField: 'nombre').snapshots();
   }
 
-  // --- LÓGICA DE REGISTRO DE ENTRADA CORREGIDA Y COMPLETA --
+  // --- LÓGICA DE REGISTRO DE ENTRADA --
   Future<void> _registrarEntrada() async {
     if (_formKey.currentState!.validate() && _selectedProductId != null) {
       setState(() => _isLoading = true);
 
-      // --- CAMBIO CLAVE: Leer cantidad y costo como double ---
       final double cantidad = double.tryParse(cantidadController.text) ?? 0.0;
       final double costoUnitario = double.tryParse(costoUnitarioController.text) ?? 0.0;
 
@@ -73,7 +72,6 @@ class EntradaPageState extends State<EntradaPage> {
           throw Exception('El producto seleccionado ya no existe.');
         }
 
-        // Stock y la nueva cantidad deben ser tratados como double
         final double stockActual = (productSnapshot.data()?['stock'] as num?)?.toDouble() ?? 0.0;
         final double nuevoStock = stockActual + cantidad;
 
@@ -86,13 +84,13 @@ class EntradaPageState extends State<EntradaPage> {
           'productoNombre': _selectedProductName,
           'tipo': 'Entrada',
           'fecha': Timestamp.now(),
-          'cantidad': cantidad, // Cantidad es double
-          'costoUnitario': costoUnitario, // Costo es double
+          'cantidad': cantidad,
+          'costoUnitario': costoUnitario,
           'proveedor': proveedorController.text.trim(),
           'documento': documentoController.text.trim(),
           'ubicacion': ubicacionController.text.trim(),
           'motivo': motivoController.text.trim(),
-          'usuario': user.email, // Registrar el email del usuario
+          'usuario': user.email,
         };
         batch.set(FirebaseFirestore.instance.collection('movimientos').doc(), movimientoData);
 
@@ -193,7 +191,7 @@ class EntradaPageState extends State<EntradaPage> {
                         final selectedDoc = items.firstWhere((doc) => doc.id == newValue);
                         final data = selectedDoc.data() as Map<String, dynamic>;
                         _selectedProductName = data['nombre'] ?? 'Desconocido';
-                        _isProductPorPeso = data['por_peso'] ?? false; // Actualizar el estado de "por peso"
+                        _isProductPorPeso = data['por_peso'] ?? false;
                       });
                     },
                     validator: (v) => v == null ? 'Seleccione un producto' : null,
@@ -202,13 +200,13 @@ class EntradaPageState extends State<EntradaPage> {
               ),
               const SizedBox(height: 20),
               
-              // Campo Cantidad - AHORA ACEPTA DECIMALES
+              // Campo Cantidad
               TextFormField(
                 controller: cantidadController,
-                // --- CAMBIO CLAVE: Aceptar decimales y limitar a números ---
+                // --- Aceptar decimales y limitar a números ---
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')), // Permite números y un punto decimal
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
                 decoration: InputDecoration(
                   labelText: 'Cantidad de Entrada (${_isProductPorPeso ? 'Kg' : 'Unidades'})',
@@ -227,13 +225,13 @@ class EntradaPageState extends State<EntradaPage> {
               ),
               const SizedBox(height: 20),
 
-              // Campo Costo Unitario - AHORA ACEPTA DECIMALES
+              // Campo Costo Unitario
               TextFormField(
                 controller: costoUnitarioController,
-                // --- CAMBIO CLAVE: Aceptar decimales y limitar a números ---
+                // --- Aceptar decimales y limitar a números ---
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')), // Permite números y un punto decimal
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
                 decoration: InputDecoration(
                   labelText: 'Costo Unitario en USD (${_isProductPorPeso ? 'por Kg' : 'por unidad'})',
@@ -280,7 +278,6 @@ class EntradaPageState extends State<EntradaPage> {
                   prefixIcon: const Icon(Icons.location_on),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                // No es estrictamente requerido, así que no se usa validator por ahora.
               ),
               const SizedBox(height: 20),
               

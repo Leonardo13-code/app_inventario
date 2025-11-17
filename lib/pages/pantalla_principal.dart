@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Importa todas las páginas de navegación
+// Páginas de navegación
 import 'package:InVen/pages/productos_page.dart';
 import 'package:InVen/pages/historial_page.dart';
 import 'package:InVen/pages/moneda_page.dart';
@@ -20,7 +20,7 @@ import 'package:InVen/pages/venta_page.dart';
 import 'package:InVen/pages/historial_ventas_page.dart';
 import 'package:InVen/pages/configuracion_page.dart';
 
-// Definición del color primario de InVen
+// Color primario de InVen
 const Color invenPrimaryColor = Color(0xFF00508C);
 
 class PantallaPrincipal extends StatefulWidget {
@@ -68,10 +68,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   final FirestoreService _firestoreService = FirestoreService(); // Instancia del servicio
   final String _userEmail = FirebaseAuth.instance.currentUser?.email ?? 'Usuario InVen';
 
-  // Umbral de stock bajo, como en productos_page.dart
+  // Umbral de stock bajo
 final int _defaultStockUmbral = 10;
 int _currentStockUmbral = 10; 
-// CAMBIO CLAVE: El Future ahora devuelve el nuevo modelo LowStockData
 late Future<LowStockData> _lowStockFuture; 
 
 @override
@@ -97,12 +96,12 @@ late Future<LowStockData> _lowStockFuture;
   // Método para refrescar el Future y el estado al volver de la Configuración
   void _refreshDashboard() {
     setState(() {
-      _lowStockFuture = _getLowStockProducts(); // Recarga la alerta
-      _loadStockUmbral(); // Recarga el umbral para las métricas
+      _lowStockFuture = _getLowStockProducts();
+      _loadStockUmbral();
     });
   }
 
-  // Lógica para obtener productos con stock bajo (usada por _lowStockFuture)
+  // Lógica para obtener productos con stock bajo
   Future<LowStockData> _getLowStockProducts() async {
       final prefs = await SharedPreferences.getInstance();
       final int umbral = prefs.getInt('stock_bajo_umbral') ?? _defaultStockUmbral; 
@@ -181,7 +180,7 @@ late Future<LowStockData> _lowStockFuture;
       page: const CostosPage(),
     ),
     Module(
-      title: 'Moneda',
+      title: 'Tasa de Cambio',
       subtitle: 'Consulta la tasa actual y realiza conversiones.',
       icon: Icons.calculate,
       color: Colors.amber.shade700,
@@ -197,14 +196,13 @@ late Future<LowStockData> _lowStockFuture;
 
   // --- WIDGET DE TARJETA ---
   Widget _buildModuleCard(Module module) {
-    // Usamos el color primario de InVen para el texto principal
     const Color invenColor = invenPrimaryColor;
 
     return InkWell(
       onTap: () => _navigateToPage(context, module.page),
       borderRadius: BorderRadius.circular(12),
-      child: Card( // Usamos Card en lugar de Container con Box Decoration para simplificar la elevación
-        elevation: 4, // Eleva ligeramente la tarjeta
+      child: Card(
+        elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -214,10 +212,8 @@ late Future<LowStockData> _lowStockFuture;
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. ÍCONO: Mantiene el color vibrante original
               Icon(module.icon, size: 32, color: module.color),
               const SizedBox(height: 8),
-              // 2. TÍTULO: Usamos un color oscuro (o InVen Primary Color)
               Text(
                 module.title,
                 style: const TextStyle(
@@ -227,7 +223,6 @@ late Future<LowStockData> _lowStockFuture;
                 ),
               ),
               const SizedBox(height: 2),
-              // 3. SUBTÍTULO: Texto en gris sutil
               Text(
                 module.subtitle,
                 style: TextStyle(
@@ -244,9 +239,7 @@ late Future<LowStockData> _lowStockFuture;
     );
   }
 
-// ====================================================================
-  // === NUEVA FUNCIÓN: AGREGACIÓN DE DATOS DE VENTAS ===
-  // ====================================================================
+  // === AGREGACIÓN DE DATOS DE VENTAS ===
   Future<SalesAnalysis> _getSalesAnalysis({DateTime? startDate}) async {
     // 1. Obtener todos los productos para mapear ID a Nombre
     final productosSnapshot = await _firestoreService.getCollectionOnce('productos');
@@ -332,9 +325,7 @@ late Future<LowStockData> _lowStockFuture;
     return SalesAnalysis(topProducts, worstSelling);
   }
 
-// ====================================================================
-  // === WIDGET DE DASHBOARD (Métricas en la parte superior) ===
-  // ====================================================================
+  // === WIDGET DE DASHBOARD ===
   Widget _buildDashboardHeader() {
     // Usaremos StreamBuilder para tiempo real.
     return StreamBuilder<QuerySnapshot>(
@@ -363,7 +354,7 @@ late Future<LowStockData> _lowStockFuture;
           valorTotalInventario += stock * precio;
           
           // Lógica para stock bajo
-          if (stock < _currentStockUmbral) {
+          if (stock > 0 && stock <= _currentStockUmbral) {
             productosBajoStock++;
           }
         }
@@ -419,7 +410,7 @@ late Future<LowStockData> _lowStockFuture;
                 maxCrossAxisExtent: 180.0, 
                 crossAxisSpacing: 10.0,
                 mainAxisSpacing: 10.0,
-                childAspectRatio: 1.6, // Tarjetas más anchas que altas
+                childAspectRatio: 1.6,
               ),
               itemBuilder: (context, index) {
                 final metric = metrics[index];
@@ -472,9 +463,7 @@ late Future<LowStockData> _lowStockFuture;
     );
   }
 
-  // ====================================================================
   // === WIDGET: ANÁLISIS DE VENTAS (MÁS/MENOS VENDIDOS) ===
-  // ====================================================================
 
   Widget _buildSalesAnalysisWidget() {
     // Definimos la fecha de inicio: 7 días antes de hoy
@@ -546,9 +535,7 @@ late Future<LowStockData> _lowStockFuture;
     );
   }
 
-  // ====================================================================
-// === NUEVO WIDGET: ADVERTENCIA DE STOCK BAJO ===
-// ====================================================================
+// === ADVERTENCIA DE STOCK BAJO ===
 Widget _buildLowStockWarning() {
 return FutureBuilder<LowStockData>( 
       future: _lowStockFuture, 
@@ -559,16 +546,16 @@ return FutureBuilder<LowStockData>(
 
         final data = snapshot.data!;
         final lowStockProducts = data.lowStockProducts;
-        final umbral = data.umbral; // AHORA OBTENEMOS EL UMBRAL CARGADO DE FORMA CORRECTA
+        final umbral = data.umbral;
         
         if (lowStockProducts.isEmpty) {
-          return const SizedBox.shrink(); // No hay alerta si la lista está vacía
+          return const SizedBox.shrink();
         }
 
         // Si hay productos con stock bajo, mostrar la alerta
         return Card(
           margin: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-          color: Colors.yellow.shade100, // Color de advertencia sutil
+          color: Colors.yellow.shade100,// Fondo amarillo clarito
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -624,8 +611,7 @@ return FutureBuilder<LowStockData>(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.inventory, size: 20),
-                    label: const Text('Ir a Productos'),
-                    // Asumimos que _navigateToPage es la función que usamos para navegar
+                    label: const Text('Ir a Inventario'),
                     onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ProductosPage())), 
                     style: OutlinedButton.styleFrom(
                       foregroundColor: invenPrimaryColor,
@@ -722,20 +708,12 @@ return FutureBuilder<LowStockData>(
     return Scaffold(
       appBar: AppBar(
         title: const Text('InVen', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await _authService.signOut();
-            },
-          ),
-        ],
       ),
       drawer: _buildDrawer(context),
       
-// CAMBIO CLAVE: Usamos ListView para poder tener el Header y el GridView
+// Usamos ListView para poder tener el Header y el GridView
       body: SafeArea(
-        child: SingleChildScrollView( // Permite el scroll vertical de toda la pantalla
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,7 +724,7 @@ return FutureBuilder<LowStockData>(
               // 2. WIDGET DE ADVERTENCIA DE STOCK BAJO CLIENTE-SIDE
               _buildLowStockWarning(),
 
-              // 3. NUEVO: WIDGET DE ANÁLISIS DE VENTAS (MÁS/MENOS VENDIDOS)
+              // 3. WIDGET DE ANÁLISIS DE VENTAS (MÁS/MENOS VENDIDOS)
               _buildSalesAnalysisWidget(),
 
               // 4. TÍTULO PARA LOS MÓDULOS
@@ -812,10 +790,8 @@ return FutureBuilder<LowStockData>(
               },
             ),
 
-            // Separador visual antes de los módulos
             const Divider(),
             
-            // Título de la sección de módulos
             const Padding(
               padding: EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 4.0),
               child: Text(
@@ -840,15 +816,14 @@ return FutureBuilder<LowStockData>(
               );
             }),
             
-            const Divider(), // Separador
+            const Divider(),
 
-            // NUEVO: Item de Configuración
+            // Item de Configuración
             ListTile(
               leading: const Icon(Icons.settings, color: invenPrimaryColor),
               title: const Text('Configuración', style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () async {
-                Navigator.pop(context); // Cerrar el drawer
-                // Navegar y esperar hasta que la página de Configuración regrese
+                Navigator.pop(context);
                 await Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => const ConfiguracionPage()), 
                 );
@@ -857,14 +832,13 @@ return FutureBuilder<LowStockData>(
               },
             ),
 
-            const Divider(), // Separador
+            const Divider(),
 
-            // Enlace de Cerrar Sesión
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
               onTap: () async {
-                Navigator.pop(context); // Cierra el drawer
+                Navigator.pop(context);
                 await _authService.signOut();
               },
             ),

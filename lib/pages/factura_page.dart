@@ -88,7 +88,7 @@ class FacturaPage extends StatelessWidget {
           style: const TextStyle(fontSize: 14),
         ),
         const Text(
-          'Cliente: Público General', // Puedes pedirle al usuario que ingrese un nombre
+          'Cliente: Público General',
           style: TextStyle(fontSize: 14),
         ),
       ],
