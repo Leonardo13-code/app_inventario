@@ -34,7 +34,7 @@ class FirestoreService {
     return _db.collection(collectionPath).add(data);
   }
 
-  // NUEVO MÉTODO: setDocument
+  // setDocument
   Future<void> setDocument(String collectionPath, String documentId, Map<String, dynamic> data) {
     return _db.collection(collectionPath).doc(documentId).set(data);
   }

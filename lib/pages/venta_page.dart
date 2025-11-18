@@ -1,6 +1,6 @@
 // lib/pages/venta_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Importación para formatos de entrada
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:InVen/services/firestore_service.dart';
 import 'package:intl/intl.dart';
@@ -104,7 +104,7 @@ void _addProduct(DocumentSnapshot productDoc) {
     final double precio = (data['precio'] as num?)?.toDouble() ?? 0.0;
     
     final bool esPorPeso = data['por_peso'] ?? false; 
-    final bool esExentoIva = data['exento_iva'] ?? false; // NUEVO CAMPO
+    final bool esExentoIva = data['exento_iva'] ?? false;
     
     if (stockActual <= 0) {
       _showSnackbar('Producto sin stock disponible.');
@@ -130,7 +130,7 @@ void _addProduct(DocumentSnapshot productDoc) {
           'cantidad': 1.0,
           'subtotal': precio,
           'es_por_peso': false,
-          'exento_iva': esExentoIva, // Guardar estado IVA
+          'exento_iva': esExentoIva,
         });
       }
       _calculateTotals();
@@ -145,14 +145,14 @@ void _addProduct(DocumentSnapshot productDoc) {
     final String productoId = productDoc.id;
     final String nombre = data['nombre'] ?? 'Desconocido';
     final double precio = (data['precio'] as num?)?.toDouble() ?? 0.0;
-    final bool esExentoIva = data['exento_iva'] ?? false; // Capturar estado IVA
+    final bool esExentoIva = data['exento_iva'] ?? false;
     final TextEditingController quantityCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Ingresar Cantidad de ${nombre}'),
+          title: Text('Ingresar Cantidad de $nombre'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +219,7 @@ void _addProduct(DocumentSnapshot productDoc) {
           'cantidad': cantidad,
           'subtotal': subtotal,
           'es_por_peso': esPorPeso,
-          'exento_iva': esExentoIva, // Guardar estado IVA
+          'exento_iva': esExentoIva,
         };
       } else {
         _selectedProducts.add({
@@ -229,7 +229,7 @@ void _addProduct(DocumentSnapshot productDoc) {
           'cantidad': cantidad,
           'subtotal': subtotal,
           'es_por_peso': esPorPeso,
-          'exento_iva': esExentoIva, // Guardar estado IVA
+          'exento_iva': esExentoIva,
         });
       }
       _calculateTotals();
@@ -296,7 +296,7 @@ void _addProduct(DocumentSnapshot productDoc) {
               'nombre': p['nombre'],
               'cantidad': p['cantidad'],
               'es_por_peso': p['es_por_peso'],
-              'exento_iva': p['exento_iva'], // NUEVO CAMPO GUARDADO
+              'exento_iva': p['exento_iva'],
               'precioUnitario': p['precio'],
               'subtotal': p['subtotal'],
             }).toList(),
@@ -408,10 +408,10 @@ void _addProduct(DocumentSnapshot productDoc) {
                       final product = products[index];
                       final data = product.data() as Map<String, dynamic>;
                       final nombre = data['nombre'] ?? 'Desconocido';
-                      final stock = (data['stock'] as num?)?.toDouble() ?? 0.0; // Cambiado a double
+                      final stock = (data['stock'] as num?)?.toDouble() ?? 0.0;
                       final precioDolar = (data['precio'] as num?)?.toDouble() ?? 0.0;
                       final precioBolivar = precioDolar * _tasaDolar;
-                      final esPorPeso = data['por_peso'] ?? false; // Nuevo campo
+                      final esPorPeso = data['por_peso'] ?? false;
 
                       return Card(
                         margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
@@ -559,7 +559,6 @@ void _addProduct(DocumentSnapshot productDoc) {
   }
 
   Widget _buildTotalRow(String label, double dolarValue, {bool isBold = false}) {
-    // ... (Tu función _buildTotalRow permanece igual)
     final style = TextStyle(
       fontSize: isBold ? 18 : 16,
       fontWeight: isBold ? FontWeight.bold : FontWeight.normal,

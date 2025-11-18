@@ -1,11 +1,10 @@
 // lib/pages/historial_ventas_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // ¡NUEVO!
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart'; 
-// Asegúrate de que esta clase exista y tenga el constructor fromFirestore
 import 'package:InVen/utils/pdf_generator.dart'; 
 
 class HistorialVentasPage extends StatefulWidget {
@@ -21,7 +20,7 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
   
-  // --- NUEVA FUNCIÓN: VALIDACIÓN DE CONTRASEÑA ---
+  // --- VALIDACIÓN DE CONTRASEÑA ---
 
   Future<bool> _validarCredenciales(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -45,7 +44,7 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Por seguridad, ingrese su contraseña para confirmar la eliminación de historial de ventas (${userEmail}):'),
+              Text('Por seguridad, ingrese su contraseña para confirmar la eliminación de historial de ventas ($userEmail):'),
               const SizedBox(height: 10),
               TextField(
                 onChanged: (value) => password = value,
@@ -119,7 +118,6 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      // El idioma español se configura en MaterialApp (main.dart) con flutter_localizations.
     );
 
     if (picked != null) {
@@ -127,7 +125,7 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
           ? picked.copyWith(hour: 0, minute: 0, second: 0, microsecond: 0, millisecond: 0)
           : picked.copyWith(hour: 23, minute: 59, second: 59, microsecond: 999, millisecond: 999);
       
-      if (context.mounted) { // Usamos context.mounted para un manejo seguro
+      if (context.mounted) {
         if (esFechaInicio) {
           _selectedStartDate = adjustedDate;
         } else {
@@ -220,7 +218,7 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
     );
   }
 
-  // --- NUEVA FUNCIÓN: PROCESO SECUENCIAL ---
+  // --- PROCESO SECUENCIAL ---
   Future<void> _iniciarProcesoEliminacion(BuildContext parentContext) async {
     // 1. Validar contraseña
     final bool credencialesValidas = await _validarCredenciales(parentContext);
@@ -259,7 +257,7 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
     }
     
     final bool? confirmar = await showDialog<bool>(
-      context: parentContext, // Usamos parentContext
+      context: parentContext,
       builder: (context) => AlertDialog(
         title: const Text('¡ADVERTENCIA! Eliminación Masiva'),
         content: Text(
@@ -328,7 +326,6 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
 
   void _openPdfPreview(DocumentSnapshot ventaDoc) async {
     try {
-      // Asegúrate de que esta clase exista y esté correctamente importada
       final InvoiceData data = InvoiceData.fromFirestore(ventaDoc); 
       
       await Printing.layoutPdf(

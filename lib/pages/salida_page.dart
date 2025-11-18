@@ -1,6 +1,6 @@
 // lib/pages/salida_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Necesario para FilteringTextInputFormatter
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:InVen/services/firestore_service.dart';
@@ -18,8 +18,8 @@ class SalidaPageState extends State<SalidaPage> {
 
   String? _selectedProductId;
   String? _selectedProductName;
-  double _currentProductStock = 0.0; // CAMBIO CLAVE: Stock ahora es double
-  bool _isProductPorPeso = false; // Nueva variable para mostrar si es por peso
+  double _currentProductStock = 0.0;
+  bool _isProductPorPeso = false;
 
   bool _isLoading = false;
 
@@ -44,7 +44,7 @@ class SalidaPageState extends State<SalidaPage> {
     if (_formKey.currentState!.validate() && _selectedProductId != null) {
       setState(() => _isLoading = true);
       
-      // --- CAMBIO CLAVE: Leer cantidad como double ---
+      // --- Leer cantidad como double ---
       final double cantidad = double.tryParse(cantidadController.text) ?? 0.0;
       
       if (cantidad <= 0) {
@@ -53,7 +53,7 @@ class SalidaPageState extends State<SalidaPage> {
         return;
       }
       
-      // --- CAMBIO CLAVE: Comparar con stock double ---
+      // --- Comparar con stock double ---
       if (cantidad > _currentProductStock) {
         _showSnackbar('No hay suficiente stock disponible (Stock: ${_currentProductStock.toStringAsFixed(_isProductPorPeso ? 2 : 0)} ${_isProductPorPeso ? 'Kg' : 'unidades'}).');
         setState(() => _isLoading = false);
@@ -180,7 +180,7 @@ class SalidaPageState extends State<SalidaPage> {
                       prefixIcon: const Icon(Icons.inventory),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    value: _selectedProductId,
+                    initialValue: _selectedProductId,
                     items: dropdownItems,
                     onChanged: (String? newValue) {
                       setState(() {
@@ -190,7 +190,6 @@ class SalidaPageState extends State<SalidaPage> {
                         final selectedDoc = items.firstWhere((doc) => doc.id == newValue);
                         final data = selectedDoc.data() as Map<String, dynamic>;
                         _selectedProductName = data['nombre'] ?? 'Desconocido';
-                        // --- CAMBIO CLAVE: Leer stock como double ---
                         _currentProductStock = (data['stock'] as num?)?.toDouble() ?? 0.0;
                         _isProductPorPeso = data['por_peso'] ?? false;
                       });
@@ -201,7 +200,7 @@ class SalidaPageState extends State<SalidaPage> {
               ),
               const SizedBox(height: 10),
               
-              // Mostrar Stock Actual (Actualizado para double y peso)
+              // Mostrar Stock Actual
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
@@ -212,13 +211,13 @@ class SalidaPageState extends State<SalidaPage> {
 
               const SizedBox(height: 10),
               
-              // Campo Cantidad - AHORA ACEPTA DECIMALES
+              // Campo Cantidad
               TextFormField(
                 controller: cantidadController,
-                // --- CAMBIO CLAVE: Aceptar decimales y limitar a números ---
+                // --- Aceptar decimales y limitar a números ---
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')), // Permite números y un punto decimal
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
                 decoration: InputDecoration(
                   labelText: 'Cantidad de Salida (${_isProductPorPeso ? 'Kg' : 'Unidades'})',

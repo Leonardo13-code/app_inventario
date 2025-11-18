@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:InVen/auth/auth_gate.dart'; // Tu pantalla de login/autenticación
+import 'package:InVen/auth/auth_gate.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
       });
     });
 
-    // Navega a la pantalla de autenticación (AuthGate) después de 3 segundos
+    // Navega a la pantalla de autenticación
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -36,21 +36,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Puedes definir el color primario para el fondo si lo necesitas
     return Scaffold(
-      // Puedes usar un color de marca o blanco puro
       backgroundColor: Colors.white, 
       body: Center(
         child: AnimatedOpacity(
           opacity: _logoOpacity,
-          duration: const Duration(milliseconds: 1000), // 1 segundo de duración del fundido
+          duration: const Duration(milliseconds: 2000), // 2 segundos de duración del fundido
           curve: Curves.easeIn, 
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Carga el logo (solo icono)
               Image.asset(
-                'assets/images/logo/logo_light.jpeg', // Ruta del logo (solo icono)
+                'assets/images/logo/logo_light.jpeg',
                 height: 500,
 
               ),

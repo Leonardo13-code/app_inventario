@@ -47,7 +47,7 @@ class _HistorialPageState extends State<HistorialPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Por seguridad, ingrese su contraseña para confirmar la eliminación de historial (${userEmail}):'),
+              Text('Por seguridad, ingrese su contraseña para confirmar la eliminación de historial ($userEmail):'),
               const SizedBox(height: 10),
               TextField(
                 onChanged: (value) => password = value,
@@ -122,12 +122,6 @@ class _HistorialPageState extends State<HistorialPage> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      // **CORRECCIÓN: Configuración del idioma** (Se hace a nivel de MaterialApp, pero se mantiene la sintaxis)
-      // builder: (context, child) => Localizations.override(
-      //   context: context,
-      //   locale: const Locale('es', 'ES'),
-      //   child: child,
-      // ),
     );
 
     if (picked != null) {
@@ -135,7 +129,7 @@ class _HistorialPageState extends State<HistorialPage> {
           ? picked.copyWith(hour: 0, minute: 0, second: 0, microsecond: 0, millisecond: 0)
           : picked.copyWith(hour: 23, minute: 59, second: 59, microsecond: 999, millisecond: 999);
       
-      if (context.mounted) { // Usamos context.mounted ya que estamos en un async
+      if (context.mounted) {
         if (esFechaInicio) {
           _selectedStartDate = adjustedDate;
         } else {
@@ -228,7 +222,7 @@ class _HistorialPageState extends State<HistorialPage> {
     );
   }
 
-  // --- NUEVA FUNCIÓN: PROCESO SECUENCIAL ---
+  // --- PROCESO SECUENCIAL ---
   Future<void> _iniciarProcesoEliminacion(BuildContext parentContext) async {
     // 1. Validar contraseña
     final bool credencialesValidas = await _validarCredenciales(parentContext);
@@ -246,7 +240,7 @@ class _HistorialPageState extends State<HistorialPage> {
     final Timestamp startTimestamp = Timestamp.fromDate(_selectedStartDate!);
     final Timestamp endTimestamp = Timestamp.fromDate(_selectedEndDate!);
 
-    // Paso 1: Contar documentos en el rango
+    //1: Contar documentos en el rango
     final countSnapshot = await FirebaseFirestore.instance
         .collection(_collectionName)
         .where('fecha', isGreaterThanOrEqualTo: startTimestamp) 
@@ -271,7 +265,7 @@ class _HistorialPageState extends State<HistorialPage> {
         return; 
     }
 
-    // Paso 2: Mostrar diálogo de confirmación 
+    //2: Mostrar diálogo de confirmación 
     final bool? confirmar = await showDialog<bool>(
       context: parentContext, 
       builder: (context) => AlertDialog(
@@ -296,7 +290,7 @@ class _HistorialPageState extends State<HistorialPage> {
     // Verificación de mounted después del segundo await.
     if (!mounted) return;
 
-    // Paso 3: Ejecutar la eliminación por lotes
+    //3: Ejecutar la eliminación por lotes
     if (confirmar == true) {
       try {
         await _batchDeleteDocuments(_collectionName, startTimestamp, endTimestamp);
@@ -345,7 +339,7 @@ class _HistorialPageState extends State<HistorialPage> {
     } while (snapshot.docs.isNotEmpty);
   }
   
-  // --- BUILD METHOD (sin cambios relevantes) ---
+  // --- BUILD METHOD ---
 
   @override
   Widget build(BuildContext context) {
@@ -458,7 +452,7 @@ class _HistorialPageState extends State<HistorialPage> {
                       final String cantidadText = cantidad.abs().toStringAsFixed(cantidad.abs() == cantidad.abs().truncateToDouble() ? 0 : 2);
                       final String costoTotal = (cantidad.abs() * costoUnitario).toStringAsFixed(2);
                       
-                      final String costoTotalDisplay = '\$${costoTotal}';
+                      final String costoTotalDisplay = '\$$costoTotal';
 
                       return Card(
                         color: color,

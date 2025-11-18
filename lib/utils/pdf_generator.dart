@@ -37,7 +37,7 @@ class InvoiceData {
 }
 
 class PdfInvoiceGenerator {
-  // --- ¡IMPORTANTE! MODIFICA ESTOS DATOS CON LA INFORMACIÓN DE TU NEGOCIO ---
+  // --- INFORMACIÓN DEL NEGOCIO ---
   static const String businessName = 'TU NEGOCIO DE INVENTARIO C.A.';
   static const String businessRif = 'J-00000000-0';
   static const String businessAddress = 'Calle Principal, Edificio X, Ciudad, Estado';
@@ -155,7 +155,6 @@ class PdfInvoiceGenerator {
       ];
     }).toList();
 
-    // Reemplazamos pw.Table.fromTextArray con pw.TableHelper.fromTextArray
     return pw.TableHelper.fromTextArray(
       headers: tableHeaders,
       data: tableRows,
@@ -168,14 +167,14 @@ class PdfInvoiceGenerator {
         0: const pw.FlexColumnWidth(3),
         1: const pw.FlexColumnWidth(1),
         2: const pw.FlexColumnWidth(1.5),
-        3: const pw.FlexColumnWidth(1), // Nueva columna IVA
+        3: const pw.FlexColumnWidth(1),
         4: const pw.FlexColumnWidth(1.5),
         5: const pw.FlexColumnWidth(1.8),
       },
       cellAlignments: {
         0: pw.Alignment.centerLeft,
         1: pw.Alignment.center,
-        3: pw.Alignment.center, // Alinear IVA/Exento al centro
+        3: pw.Alignment.center,
       },
     );
 }
