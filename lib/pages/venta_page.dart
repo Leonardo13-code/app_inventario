@@ -33,6 +33,8 @@ class _VentaPageState extends State<VentaPage> {
   double _tasaDolar = 0.0;
   final double _taxRate = 0.16;
 
+  bool _isProcessingSale = false;
+
   @override
   void initState() {
     super.initState();
@@ -249,10 +251,16 @@ void _addProduct(DocumentSnapshot productDoc) {
   }
 
   Future<void> _confirmSale() async {
+    if (_isProcessingSale) return;
     if (!_formKey.currentState!.validate()) {
       _showSnackbar('Por favor, complete los datos del cliente y vendedor.');
       return;
     }
+
+    setState(() {
+    _isProcessingSale = true; // Bloqueamos el botón
+    });
+
     if (_selectedProducts.isEmpty) {
       _showSnackbar('El pedido está vacío.');
       return;
@@ -319,12 +327,30 @@ void _addProduct(DocumentSnapshot productDoc) {
 
     } catch (e) {
       _showSnackbar('Error al procesar la venta: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingSale = false; // Desbloqueamos al terminar (sea éxito o error)
+        });
+      }
     }
   }
 
 @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // Verifica si hay items para activar la protección
+  final bool impedirSalida = _selectedProducts.isNotEmpty;
+
+  return WillPopScope(
+    onWillPop: () async {
+      // Si no hay items, permitir salir normalmente
+      if (!impedirSalida) return true;
+
+      // Mostrar diálogo de confirmación y devolver la decisión del usuario
+      final bool salir = await _mostrarConfirmacionSalida();
+      return salir;
+    },
+    child: Scaffold(
       appBar: AppBar(
         title: const Text(
           'Nuevo Pedido',
@@ -538,14 +564,13 @@ void _addProduct(DocumentSnapshot productDoc) {
                   const SizedBox(height: 10),
                   Center(
                     child: ElevatedButton.icon(
-                      onPressed: _selectedProducts.isNotEmpty ? _confirmSale : null,
-                      icon: const Icon(Icons.check, color: Colors.white),
-                      label: const Text('Confirmar Pedido', style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                        textStyle: const TextStyle(fontSize: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      onPressed: (_selectedProducts.isNotEmpty && !_isProcessingSale) ? _confirmSale : null,
+                      icon: _isProcessingSale
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Icon(Icons.check, color: Colors.white),
+                      label: Text(
+                        _isProcessingSale ? 'Procesando...' : 'Confirmar Pedido',
+                        style: const TextStyle(color: Colors.white),
                       ),
                     ),
                   ),
@@ -555,8 +580,25 @@ void _addProduct(DocumentSnapshot productDoc) {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
+  // Función auxiliar al final de la clase
+Future<bool> _mostrarConfirmacionSalida() async {
+  return await showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('¿Cancelar venta?'),
+      content: const Text('Tienes productos en el carrito. Si sales, se perderán.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Quedarme')),
+        TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Salir y Borrar', style: TextStyle(color: Colors.red))),
+      ],
+    ),
+  ) ?? false;
+}
 
   Widget _buildTotalRow(String label, double dolarValue, {bool isBold = false}) {
     final style = TextStyle(

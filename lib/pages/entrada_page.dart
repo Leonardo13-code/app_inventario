@@ -122,16 +122,24 @@ class EntradaPageState extends State<EntradaPage> {
   
   void _resetForm() {
     if (mounted) {
+      // 1. Cerrar el teclado (UX Profesional)
+      FocusScope.of(context).unfocus();
+
       setState(() {
+        // 2. Resetear variables de estado
         _selectedProductId = null;
         _selectedProductName = null;
         _isProductPorPeso = false;
+
+        // 3. Limpiar todos los controladores de texto
         cantidadController.clear();
         costoUnitarioController.clear();
         proveedorController.clear();
         documentoController.clear();
         ubicacionController.clear();
         motivoController.clear();
+
+        // 4. Resetear el estado visual del formulario (quita textos rojos de error)
         _formKey.currentState?.reset();
       });
     }

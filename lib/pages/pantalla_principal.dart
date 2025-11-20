@@ -68,21 +68,21 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   final FirestoreService _firestoreService = FirestoreService(); // Instancia del servicio
   final String _userEmail = FirebaseAuth.instance.currentUser?.email ?? 'Usuario InVen';
 
-  // Umbral de stock bajo
-final int _defaultStockUmbral = 10;
-int _currentStockUmbral = 10; 
-late Future<LowStockData> _lowStockFuture; 
+    // Umbral de stock bajo
+  final int _defaultStockUmbral = 10;
+  int _currentStockUmbral = 10; 
+  late Future<LowStockData> _lowStockFuture; 
 
-@override
-  void initState() {
-    super.initState();
-    // 1. Inicializa el Future para la alerta
-    _lowStockFuture = _getLowStockProducts(); 
-    // 2. Carga el umbral actual para las métricas del encabezado
-    _loadStockUmbral();
-  }
+  @override
+    void initState() {
+      super.initState();
+      // 1. Inicializa el Future para la alerta
+      _lowStockFuture = _getLowStockProducts(); 
+      // 2. Carga el umbral actual para las métricas del encabezado
+      _loadStockUmbral();
+    }
 
-// Método para cargar el umbral actual desde SharedPreferences
+  // Método para cargar el umbral actual desde SharedPreferences
   Future<void> _loadStockUmbral() async {
     final prefs = await SharedPreferences.getInstance();
     final int umbral = prefs.getInt('stock_bajo_umbral') ?? _defaultStockUmbral;
@@ -100,6 +100,33 @@ late Future<LowStockData> _lowStockFuture;
       _loadStockUmbral();
     });
   }
+
+  void _mostrarDialogoCierreSesion(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Cerrar Sesión'),
+          content: const Text('¿Estás seguro de que deseas salir de InVen?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), // Cerrar diálogo
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Cerrar diálogo
+                await _authService.signOut(); // Cerrar sesión real
+              },
+              child: const Text('Salir', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   // Lógica para obtener productos con stock bajo
   Future<LowStockData> _getLowStockProducts() async {
@@ -832,14 +859,41 @@ return FutureBuilder<LowStockData>(
               },
             ),
 
+
+            ListTile(
+              leading: const Icon(Icons.info_outline, color: invenPrimaryColor),
+              title: const Text('Acerca de', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(context);
+                showAboutDialog(
+                  context: context,
+                  applicationName: 'InVen',
+                  applicationVersion: 'Versión 1.0.0',
+                  applicationLegalese: '© 2025 InVen - Desarrolladores Leonardo Barreto & Stefany Barreto |\nProyecto de Grado - Ingeniería en Informática UPTT',
+                  applicationIcon: const Icon(Icons.inventory_2, size: 50, color: invenPrimaryColor),
+                  children: [
+                    const SizedBox(height: 20),
+                    const Text('Sistema de Gestión de Inventario, Ventas y Facturación desarrollado con Flutter y Firebase.'),
+                    const SizedBox(height: 10),
+                    const Text('Características:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('• Control de Stock en tiempo real'),
+                    const Text('• Manejo de ventas de productos'),
+                    const Text('• Facturación PDF multimoneda'),
+                    const Text('• Tasa BCV automática y manual'),
+                    const Text('• Cálculo de Costos (CAPP)'),
+                  ],
+                );
+              },
+            ),
+
             const Divider(),
 
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
-              onTap: () async {
-                Navigator.pop(context);
-                await _authService.signOut();
+              onTap: () {
+                Navigator.pop(context); // Cierra el drawer
+                _mostrarDialogoCierreSesion(context);
               },
             ),
           ],
