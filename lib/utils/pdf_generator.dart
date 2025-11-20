@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Modelo simplificado para los datos de la factura
 class InvoiceData {
@@ -37,14 +38,28 @@ class InvoiceData {
 }
 
 class PdfInvoiceGenerator {
-  // --- INFORMACIÓN DEL NEGOCIO ---
-  static const String businessName = 'TU NEGOCIO DE INVENTARIO C.A.';
-  static const String businessRif = 'J-00000000-0';
-  static const String businessAddress = 'Calle Principal, Edificio X, Ciudad, Estado';
-  // --------------------------------------------------------------------------
+  
+  // Valores por defecto en caso de que SharedPreferences no tenga nada aún
+  static const String _defaultBusinessName = 'TU NEGOCIO DE INVENTARIO C.A.';
+  static const String _defaultBusinessRif = 'J-00000000-0';
+  static const String _defaultBusinessAddress = 'Dirección no especificada';
+
+  // --- NUEVA FUNCIÓN: Carga los datos de la empresa ---
+  static Future<Map<String, String>> _loadBusinessInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'name': prefs.getString('business_name') ?? _defaultBusinessName,
+      'rif': prefs.getString('business_rif') ?? _defaultBusinessRif,
+      'address': prefs.getString('business_address') ?? _defaultBusinessAddress,
+    };
+  }
 
   // Función principal para crear el PDF
   static Future<Uint8List> generateInvoice(InvoiceData data) async {
+    final businessInfo = await _loadBusinessInfo();
+    final String businessName = businessInfo['name']!;
+    final String businessRif = businessInfo['rif']!;
+    final String businessAddress = businessInfo['address']!;
     final pdf = pw.Document();
     final font = await PdfGoogleFonts.openSansRegular();
     final boldFont = await PdfGoogleFonts.openSansBold();
@@ -57,8 +72,8 @@ class PdfInvoiceGenerator {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               // 1. Encabezado del Negocio
-              _buildHeader(data, boldFont),
-              pw.SizedBox(height: 20),
+              _buildHeader(data, boldFont, businessName, businessRif, businessAddress),
+              pw.SizedBox(height: 10),
 
               // 2. Datos del Cliente
               _buildCustomerInfo(data, font, boldFont),
@@ -79,7 +94,7 @@ class PdfInvoiceGenerator {
     return pdf.save();
   }
 
-  static pw.Widget _buildHeader(InvoiceData data, pw.Font boldFont) {
+  static pw.Widget _buildHeader(InvoiceData data, pw.Font boldFont, String businessName, String businessRif, String businessAddress) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [

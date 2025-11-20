@@ -139,98 +139,105 @@ class _LoginPageState extends State<LoginPage> {
         centerTitle: true,
         backgroundColor: Theme.of(context).primaryColor,
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Para que la columna ocupe el mínimo espacio
-                  children: [
-                    Text(
-                      isLogin ? "Bienvenido de nuevo" : "Crea una cuenta",
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 30),
-                    TextFormField(
-                      controller: emailController,
-                      decoration: const InputDecoration(
-                        labelText: "Correo electrónico",
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor, ingresa tu correo';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: passwordController,
-                      decoration: const InputDecoration(
-                        labelText: "Contraseña",
-                        prefixIcon: Icon(Icons.lock),
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor, ingresa tu contraseña';
-                        }
-                        if (value.length < 6 && !isLogin) { // Solo si es registro
-                          return 'La contraseña debe tener al menos 6 caracteres';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    _isLoading
-                        ? const CircularProgressIndicator() // Indicador de carga
-                        : ElevatedButton(
-                            onPressed: _handleAuth,
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 50), // Botón de ancho completo
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+      body: SafeArea(
+        child: Center( 
+          child: ConstrainedBox( 
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Card(
+                elevation: 8,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Para que la columna ocupe el mínimo espacio
+                      children: [
+                        Text(
+                          isLogin ? "Bienvenido de nuevo" : "Crea una cuenta",
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 30),
+                        TextFormField(
+                          controller: emailController,
+                          decoration: const InputDecoration(
+                            labelText: "Correo electrónico",
+                            prefixIcon: Icon(Icons.email),
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, ingresa tu correo';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: passwordController,
+                          decoration: const InputDecoration(
+                            labelText: "Contraseña",
+                            prefixIcon: Icon(Icons.lock),
+                            border: OutlineInputBorder(),
+                          ),
+                          obscureText: true,
+                          textInputAction: TextInputAction.done, // Muestra botón de "Check" en teclado móvil
+                          onFieldSubmitted: (value) => _handleAuth(),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, ingresa tu contraseña';
+                            }
+                            if (value.length < 6 && !isLogin) { // Solo si es registro
+                              return 'La contraseña debe tener al menos 6 caracteres';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        _isLoading
+                            ? const CircularProgressIndicator() // Indicador de carga
+                            : ElevatedButton(
+                                onPressed: _handleAuth,
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 50), // Botón de ancho completo
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: Text(
+                                  isLogin ? "Iniciar Sesión" : "Registrar",
+                                  style: const TextStyle(fontSize: 18),
+                                ),
                               ),
-                            ),
+                        const SizedBox(height: 10),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              isLogin = !isLogin;
+                              _formKey.currentState?.reset(); // Limpiar validaciones al cambiar
+                            });
+                          },
+                          child: Text(
+                            isLogin
+                                ? "¿No tienes cuenta? Regístrate"
+                                : "¿Ya tienes cuenta? Inicia sesión",
+                            style: TextStyle(color: Theme.of(context).primaryColor),
+                          ),
+                        ),
+                        if (isLogin) // Mostrar opción de restablecer solo en la vista de login
+                          TextButton(
+                            onPressed: _resetPassword,
                             child: Text(
-                              isLogin ? "Iniciar Sesión" : "Registrar",
-                              style: const TextStyle(fontSize: 18),
+                              "¿Olvidaste tu contraseña?",
+                              style: TextStyle(color: Colors.grey[600]),
                             ),
                           ),
-                    const SizedBox(height: 10),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          isLogin = !isLogin;
-                          _formKey.currentState?.reset(); // Limpiar validaciones al cambiar
-                        });
-                      },
-                      child: Text(
-                        isLogin
-                            ? "¿No tienes cuenta? Regístrate"
-                            : "¿Ya tienes cuenta? Inicia sesión",
-                        style: TextStyle(color: Theme.of(context).primaryColor),
-                      ),
+                      ],
                     ),
-                    if (isLogin) // Mostrar opción de restablecer solo en la vista de login
-                      TextButton(
-                        onPressed: _resetPassword,
-                        child: Text(
-                          "¿Olvidaste tu contraseña?",
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
             ),

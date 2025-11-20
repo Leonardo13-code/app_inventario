@@ -46,4 +46,22 @@ class FirestoreService {
   Future<void> deleteDocument(String collectionPath, String documentId) {
     return _db.collection(collectionPath).doc(documentId).delete();
   }
+
+  // MÉTODO A AÑADIR/MODIFICAR para leer el URL del manual
+  Future<String?> getGlobalConfigUrl(String configField) async {
+    try {
+      // Leemos de la colección 'config' y el documento 'general'
+      final doc = await _db.collection('config').doc('general').get();
+      
+      if (doc.exists && doc.data() != null) {
+        // Devuelve el valor del campo solicitado (que es 'manual_url')
+        return doc.data()![configField] as String?;
+      }
+      return null;
+    } catch (e) {
+      // Esto capturará errores si, por ejemplo, la colección aún no existe
+      print('Error al obtener la URL de configuración: $e');
+      return null;
+    }
+  }
 }

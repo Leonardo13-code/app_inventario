@@ -123,14 +123,22 @@ class SalidaPageState extends State<SalidaPage> {
 
   void _resetForm() {
     if (mounted) {
+      // 1. Cerrar el teclado
+      FocusScope.of(context).unfocus();
+
       setState(() {
+        // 2. Resetear variables
         _selectedProductId = null;
         _selectedProductName = null;
         _currentProductStock = 0.0;
         _isProductPorPeso = false;
+
+        // 3. Limpiar controladores
         cantidadController.clear();
         ubicacionController.clear();
         motivoController.clear();
+
+        // 4. Resetear validaciones
         _formKey.currentState?.reset();
       });
     }
