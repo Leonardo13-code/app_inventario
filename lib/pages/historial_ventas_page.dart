@@ -19,6 +19,9 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
 
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
+
+  final String _adminEmail = "leonalexbarreto@gmail.com";
+
   
   // --- VALIDACIÓN DE CONTRASEÑA ---
 
@@ -346,6 +349,10 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final String currentEmail = user?.email?.trim().toLowerCase() ?? '';
+    final String adminEmailClean = _adminEmail.trim().toLowerCase();
+    final bool isAdmin = currentEmail == adminEmailClean;
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -355,6 +362,7 @@ class _HistorialVentasPageState extends State<HistorialVentasPage> {
         backgroundColor: Colors.indigo,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          if (isAdmin)
           IconButton(
             icon: const Icon(Icons.cleaning_services, color: Colors.white),
             tooltip: 'Limpiar Historial de Ventas',
