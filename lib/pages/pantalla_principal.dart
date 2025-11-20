@@ -45,6 +45,7 @@ class Module {
   final IconData icon;
   final Color color;
   final Widget page;
+  final bool adminOnly;
 
   Module({
     required this.title,
@@ -52,6 +53,7 @@ class Module {
     required this.icon,
     required this.color,
     required this.page,
+    this.adminOnly = false,
   });
 }
 
@@ -72,6 +74,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   final int _defaultStockUmbral = 10;
   int _currentStockUmbral = 10; 
   late Future<LowStockData> _lowStockFuture; 
+
+  final String _adminEmail = "leonalexbarreto@gmail.com";
+
 
   @override
     void initState() {
@@ -177,6 +182,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       icon: Icons.settings,
       color: Colors.purple.shade700,
       page: const GestionProductosPage(),
+      adminOnly: true,
     ),
     Module(
       title: 'Entradas',
@@ -205,6 +211,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       icon: Icons.attach_money,
       color: Colors.teal.shade700,
       page: const CostosPage(),
+      adminOnly: true,
     ),
     Module(
       title: 'Tasa de Cambio',
@@ -732,11 +739,21 @@ return FutureBuilder<LowStockData>(
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final String currentEmail = user?.email?.trim().toLowerCase() ?? '';
+    final String adminEmailClean = _adminEmail.trim().toLowerCase();
+    final bool isAdmin = currentEmail == adminEmailClean;
+
+    // 3. FILTRAR MÓDULOS VISIBLES SEGÚN ROL
+    final List<Module> visibleModules = _modules.where((m) {
+      return isAdmin || !m.adminOnly;
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('InVen', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
       ),
-      drawer: _buildDrawer(context),
+      drawer: _buildDrawer(context, visibleModules),
       
 // Usamos ListView para poder tener el Header y el GridView
       body: SafeArea(
@@ -771,7 +788,7 @@ return FutureBuilder<LowStockData>(
               GridView.builder(
                 shrinkWrap: true, // ¡Importante! Hace que ocupe solo el espacio necesario.
                 physics: const NeverScrollableScrollPhysics(), // Deshabilita su propio scroll
-                itemCount: _modules.length,
+                itemCount: visibleModules.length,
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 320.0, 
                   crossAxisSpacing: 16.0, 
@@ -779,7 +796,7 @@ return FutureBuilder<LowStockData>(
                   childAspectRatio: 1.4, 
                 ),
                 itemBuilder: (context, index) {
-                  return _buildModuleCard(_modules[index]);
+                  return _buildModuleCard(visibleModules[index]);
                 },
               ),
             ],
@@ -790,7 +807,7 @@ return FutureBuilder<LowStockData>(
   }
   
   // Widget del Drawer
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildDrawer(BuildContext context, List<Module> visibleModules) {
       return Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -832,7 +849,7 @@ return FutureBuilder<LowStockData>(
             ),
 
             // Generar los ListTiles para cada módulo
-            ..._modules.map((module) {
+            ...visibleModules.map((module) {
               return ListTile(
                 leading: Icon(module.icon, color: module.color), // Usamos el color del módulo
                 title: Text(module.title),

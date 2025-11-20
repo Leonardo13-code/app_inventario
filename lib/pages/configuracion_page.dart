@@ -22,6 +22,8 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
   bool _apiDolarEnabled = true; // Estado local
   String? _manualUrl;
 
+  final String _adminEmail = "leonalexbarreto@gmail.com";
+
   @override
   void initState() {
     super.initState();
@@ -200,7 +202,7 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
         // Limpiar SharedPreferences (Configuraciones locales) excepto datos de login
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear(); 
-        // Opcional: Restaurar flags importantes si no quieres que se borre TODO (como el onboarding)
+        // Opcional: Restaurar flags importantes si no quieres que se borre Todo (como el onboarding)
         
         if (context.mounted) {
           Navigator.pop(context); // Cerrar loader
@@ -303,6 +305,21 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    
+    // --- LÓGICA DE COMPARACIÓN ROBUSTA ---
+    // 1. Obtenemos el correo actual y lo limpiamos
+    final String currentEmail = user?.email?.trim().toLowerCase() ?? '';
+    // 2. Limpiamos el correo admin definido
+    final String adminEmailClean = _adminEmail.trim().toLowerCase();
+    
+    // 3. Imprimimos en consola para verificar (Mira esto en tu terminal)
+    print("Correo Actual: '$currentEmail'");
+    print("Correo Admin Esperado: '$adminEmailClean'");
+    print("¿Son iguales?: ${currentEmail == adminEmailClean}");
+
+    // 4. Definimos si es admin
+    final bool isAdmin = currentEmail == adminEmailClean;
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -327,10 +344,35 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
           ),
           
           const Divider(height: 30),
+
+            // ==========================================
+            // --- NUEVA SECCIÓN: MANUAL DE USUARIO ---
+            // ==========================================
+            ListTile(
+              leading: const Icon(Icons.menu_book, color: Colors.indigo),
+              title: const Text(
+                'Manual de Usuario (PDF)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                _manualUrl == null 
+                  ? 'Cargando URL desde Firebase...' // Estado de carga
+                  : 'Toque para descargar/abrir la guía completa de uso de InVen.',
+              ),
+              trailing: _manualUrl == null
+                // Indicador de carga si la URL no ha cargado
+                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
+                : const Icon(Icons.download),
+              // El botón es nulo (deshabilitado) si la URL no ha cargado
+              onTap: _manualUrl == null ? null : _abrirManualUsuario, 
+            ),
+
+            const Divider(height: 30),
           
           // =================================================================
           // === CONFIGURACIÓN: UMBRAL DE STOCK BAJO ===
           // =================================================================
+          if (isAdmin) ...[
           _buildConfigItem(
             context,
             title: 'Umbral de Stock Bajo',
@@ -354,36 +396,12 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
 
           const Divider(height: 30, thickness: 1),
 
-        // ==========================================
-        // --- NUEVA SECCIÓN: MANUAL DE USUARIO ---
-        // ==========================================
-            ListTile(
-              leading: const Icon(Icons.menu_book, color: Colors.indigo),
-              title: const Text(
-                'Manual de Usuario (PDF)',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                _manualUrl == null 
-                  ? 'Cargando URL desde Firebase...' // Estado de carga
-                  : 'Toque para descargar/abrir la guía completa de uso de InVen.',
-              ),
-              trailing: _manualUrl == null
-                // Indicador de carga si la URL no ha cargado
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
-                : const Icon(Icons.download),
-              // El botón es nulo (deshabilitado) si la URL no ha cargado
-              onTap: _manualUrl == null ? null : _abrirManualUsuario, 
-            ),
-
-            const Divider(height: 30),
-
           // ==========================================
           // === ZONA DE PELIGRO ===
           // ==========================================
           const Padding(
             padding: EdgeInsets.only(left: 16.0, top: 10.0),
-            child: Text('Zona de Peligro', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: Text('Zona de Peligro (Solo Admin)', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
           ListTile(
             leading: const Icon(Icons.delete_forever, color: Colors.red, size: 30),
@@ -405,8 +423,19 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
             onTap: () => _restaurarDatos(context),
           ),
 
-          const Divider(height: 30),
+          if (!isAdmin)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(
+                    child: Text(
+                        'Funciones administrativas restringidas.',
+                        style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)
+                    )
+                ),
+              ),
+          ],
 
+          const Divider(height: 30),
 
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),

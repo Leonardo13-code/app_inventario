@@ -20,6 +20,8 @@ class _HistorialPageState extends State<HistorialPage> {
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
 
+  final String _adminEmail = "leonalexbarreto@gmail.com";
+
   // --- NUEVA FUNCIÓN: VALIDACIÓN DE CONTRASEÑA ---
 
   Future<bool> _validarCredenciales(BuildContext context) async {
@@ -343,6 +345,11 @@ class _HistorialPageState extends State<HistorialPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final String currentEmail = user?.email?.trim().toLowerCase() ?? '';
+    final String adminEmailClean = _adminEmail.trim().toLowerCase();
+    final bool isAdmin = currentEmail == adminEmailClean;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -350,6 +357,7 @@ class _HistorialPageState extends State<HistorialPage> {
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         actions: [
+          if (isAdmin)
           IconButton(
             icon: const Icon(Icons.cleaning_services, color: Colors.white),
             tooltip: 'Limpiar Historial',
