@@ -89,6 +89,12 @@ flutter_launcher_icons:
   # Ruta al logo cuadrado de alta resolución
   image_path: "assets/images/logo/icon_static.jpeg" 
   
+  # === CONFIGURACIÓN CORREGIDA PARA WINDOWS ===
+  windows:
+    generate: true
+    source_file: "assets/images/logo/icon_static.jpeg 
+  # ==========================================
+  
   # Puedes usar un fondo de color si usas íconos adaptables de Android
   # adaptive_icon_background: "#00508C" 
   # adaptive_icon_foreground: "assets/images/logo/icon_static.png" 
